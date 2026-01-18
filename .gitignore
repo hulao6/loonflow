@@ -52,3 +52,12 @@ docker_compose_deploy/loonflow_shutongflow/dbdata/*
 clock_flag.txt
 
 *.mo
+
+# Yarn related
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+.pnp.*

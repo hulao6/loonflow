@@ -396,7 +396,7 @@ function WorkflowProcess({
         } else if (assigneeType === 'variables') {
             const assigneeList = assignee.split(',');
             const assigneeInfoList = [];
-            assigneeList.map((assignee) => {
+            assigneeList.forEach((assignee) => {
                 if (assignee === 'creator') {
                     assigneeInfoList.push(t('workflow.propertyPanelLabel.assigneeTypeVariableOptions.creator'));
                 } else if (assignee === 'dept_approver') {

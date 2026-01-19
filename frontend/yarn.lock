@@ -8205,6 +8205,7 @@ __metadata:
     redux-persist: "npm:^6.0.0"
     snakecase-keys: "npm:^8.0.1"
     styled-components: "npm:^6.1.12"
+    trim-lines: "npm:^3.0.1"
     typescript: "npm:^5.0.0"
     web-vitals: "npm:^2.1.4"
     yup: "npm:^1.6.1"
@@ -15330,6 +15331,13 @@ __metadata:
   version: 0.0.3
   resolution: "tr46@npm:0.0.3"
   checksum: 10c0/047cb209a6b60c742f05c9d3ace8fa510bff609995c129a37ace03476a9b12db4dbf975e74600830ef0796e18882b2381fb5fb1f6b4f96b832c374de3ab91a11
+  languageName: node
+  linkType: hard
+
+"trim-lines@npm:^3.0.1":
+  version: 3.0.1
+  resolution: "trim-lines@npm:3.0.1"
+  checksum: 10c0/3a1611fa9e52aa56a94c69951a9ea15b8aaad760eaa26c56a65330dc8adf99cb282fc07cc9d94968b7d4d88003beba220a7278bbe2063328eb23fb56f9509e94
   languageName: node
   linkType: hard
 

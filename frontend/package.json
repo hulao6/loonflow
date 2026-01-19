@@ -44,6 +44,7 @@
     "redux-persist": "^6.0.0",
     "snakecase-keys": "^8.0.1",
     "styled-components": "^6.1.12",
+    "trim-lines": "^3.0.1",
     "typescript": "^5.0.0",
     "web-vitals": "^2.1.4",
     "yup": "^1.6.1"

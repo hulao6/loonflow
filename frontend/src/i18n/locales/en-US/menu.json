@@ -15,5 +15,6 @@
   "tenant": "Tenant",
   "application": "Application",
   "notification": "Notification",
+  "authentication": "Authentication",
   "signin": "Sign In"
 }

@@ -22,5 +22,40 @@
     "notificationDetial": "Notification Detail",
     "newNotification": "New Notification",
     "notificationTypeDescription": "Notification Type Description"
+  },
+  "authentication": {
+    "title": "Authentication",
+    "addAuthentication": "Add configuration",
+    "editAuthentication": "Edit configuration",
+    "selectType": "Select authentication type",
+    "typeWecom": "WeCom",
+    "typeMicrosoftOidc": "Microsoft OIDC",
+    "loadConfigFailed": "Failed to load config",
+    "pleaseFillRequiredFields": "Please fill required fields",
+    "wecomNeedToFillAgentId": "WeCom requires Agent ID",
+    "microsoftNeedTenantId": "Microsoft OIDC requires Tenant ID",
+    "wecomScanLoginDescription": "WeCom scan login: create an app in WeCom admin and set Corp ID, Corp Secret, and Agent ID",
+    "microsoftOidcDescription": "Microsoft Entra ID (Azure AD) OIDC: register app in Azure Portal and set Client ID, Client Secret, and Tenant ID",
+    "corpId": "Corp ID",
+    "corpSecret": "Corp Secret",
+    "agentId": "Agent ID",
+    "agentIdHelper": "Get from WeCom app details",
+    "azureTenantId": "Tenant ID",
+    "azureTenantIdHelper": "Get from Azure app overview (Directory/Tenant ID)",
+    "redirectUri": "Redirect URI",
+    "redirectUriHelper": "Must be configured as redirect URI in OAuth app",
+    "description": "Description",
+    "enableConfig": "Enable this config",
+    "enableConfigNote": "Enabling will disable other configs of the same type",
+    "columnType": "Type",
+    "columnStatus": "Status",
+    "columnCreatedAt": "Created at",
+    "statusEnabled": "Enabled",
+    "statusDisabled": "Disabled",
+    "confirmDelete": "Delete this authentication config?",
+    "type": {
+      "wecom": "WeCom",
+      "microsoft_oidc": "Microsoft OIDC"
+    }
   }
 }

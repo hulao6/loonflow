@@ -25,4 +25,13 @@ module.exports = {
             return webpackConfig;
         },
     },
+    devServer: {
+        allowedHosts: [
+            'localhost',
+            'loonflow.com',
+            '.loonflow.com', // 允许所有 loonflow.com 的子域名
+        ],
+        // 或者使用 'all' 允许所有主机（不推荐用于生产环境）
+        // allowedHosts: 'all',
+    },
 };

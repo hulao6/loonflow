@@ -27,6 +27,12 @@ class AppPermissionCheck(MiddlewareMixin):
             return
         if request.path.startswith('/api/v1.0/tickets/mock_external_assignee'):
             return
+        # OAuth related endpoints don't require authentication
+        if request.path.startswith('/api/v1.0/manage/auth/'):
+            # Set default tenant_id for OAuth endpoints
+            if not request.META.get('HTTP_TENANTID'):
+                request.META.update(dict(HTTP_TENANTID='00000000-0000-0000-0000-000000000001'))
+            return
         if request.path.startswith('/api/'):
             auth_header = request.META.get('HTTP_AUTHORIZATION')
             if auth_header:

@@ -125,5 +125,15 @@
     "invalidDateTime": "Invalid date time format"
   },
   "update": "update",
-  "selected": "selected"
+  "selected": "selected",
+  "authentication": {
+    "title": "Authentication"
+  },
+  "updateSuccess": "Update success",
+  "operationFailed": "Operation failed",
+  "submitting": "Submitting...",
+  "deleteSuccess": "Delete success",
+  "deleteFailed": "Delete failed",
+  "loadFailed": "Load failed",
+  "rowsPerPage": "Rows per page"
 }

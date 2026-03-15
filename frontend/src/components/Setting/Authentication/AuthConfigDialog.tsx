@@ -78,8 +78,8 @@ const AuthConfigDialog: React.FC<AuthConfigDialogProps> = ({ open, type, config,
         loadConfigDetail(config.id);
       } else {
         const defaultRedirect: Record<AuthConfigType, string> = {
-          wecom: window.location.origin + '/oauth/wecom/callback',
-          microsoft_oidc: window.location.origin + '/oauth/microsoft/callback',
+          wecom: window.location.origin + '/api/v1.0/manage/auth/wecom/callback',
+          microsoft_oidc: window.location.origin + '/api/v1.0/manage/auth/microsoft_oidc/callback',
         };
         setFormData({
           clientId: '',
@@ -233,7 +233,6 @@ const AuthConfigDialog: React.FC<AuthConfigDialogProps> = ({ open, type, config,
                 value={formData.redirectUri}
                 onChange={(e) => handleChange('redirectUri', e.target.value)}
                 required
-                helperText={t('setting.authentication.redirectUriHelper')}
               />
             </Grid>
 

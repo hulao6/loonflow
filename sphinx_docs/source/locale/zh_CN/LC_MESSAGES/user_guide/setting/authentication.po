@@ -1,0 +1,109 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2020-2025, blackholll
+# This file is distributed under the same license as the loonflow package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: loonflow \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-15 10:58+0800\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh_CN\n"
+"Language-Team: zh_CN <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.17.0\n"
+
+#: ../../source/user_guide/setting/authentication.rst:2
+msgid "Authentication Management"
+msgstr "认证管理"
+
+#: ../../source/user_guide/setting/authentication.rst:4
+msgid ""
+"Loonflow supports multiple authentication methods. You can configure them"
+" in the \"Setting\"-\"Authentication\" page. Currently, the supported "
+"authentication methods are:"
+msgstr "Loonflow中支持多种认证方式。你可以在\"设置\"-\"认证\"页面进行配置。目前支持的认证方式有："
+
+#: ../../source/user_guide/setting/authentication.rst:6
+msgid "Microsoft OIDC: Microsoft OIDC authentication."
+msgstr "Microsoft OIDC: 微软OIDC认证。"
+
+#: ../../source/user_guide/setting/authentication.rst:7
+msgid "WeCom: WeCom authentication."
+msgstr "企业微信: 企业微信认证。"
+
+#: ../../source/user_guide/setting/authentication.rst:12
+msgid "Microsoft OIDC authentication"
+msgstr "微软OIDC认证"
+
+#: ../../source/user_guide/setting/authentication.rst:13
+msgid "Microsoft OIDC authentication is supported by Microsoft OIDC."
+msgstr "微软OIDC认证由微软OIDC提供支持。"
+
+#: ../../source/user_guide/setting/authentication.rst:15
+msgid ""
+"your need create a Microsoft OIDC app and get the client id, client "
+"secret, redirect uri."
+msgstr "你需要创建一个微软OIDC应用并获取客户端id，客户端密钥，重定向uri。"
+
+#: ../../source/user_guide/setting/authentication.rst:16
+msgid "create new microsoft oidc app"
+msgstr "创建新微软OIDC应用"
+
+#: ../../source/user_guide/setting/authentication.rst:21
+#, python-brace-format
+msgid ""
+"add redirect url, your service must listen on https,and the redirect must"
+" use be https://{your "
+"domain}/api/v1.0/manage/auth/microsoft_oidc/callback"
+msgstr "新增重定向URL，你的服务必须监听HTTPS，并且重定向必须使用HTTPS://{你的域名}/api/v1.0/manage/auth/microsoft_oidc/callback"
+
+#: ../../source/user_guide/setting/authentication.rst:22
+msgid "microsoft oidc redirect url"
+msgstr "微软OIDC重定向地址"
+
+#: ../../source/user_guide/setting/authentication.rst:29
+msgid "WeCom authentication"
+msgstr "企业微信认证"
+
+#: ../../source/user_guide/setting/authentication.rst:30
+msgid ""
+"WeCom authentication is supported by WeCom. support use wecom scan QR "
+"code to login."
+msgstr "企业微信认证由企业微信支持，支持使用微信扫码登录"
+
+#: ../../source/user_guide/setting/authentication.rst:32
+msgid "your need create a wecom app and get the appid, agentid, redirect uri."
+msgstr "你需要创建一个微软OIDC应用并获取客户端id，客户端密钥，重定向uri。"
+
+#: ../../source/user_guide/setting/authentication.rst:33
+#: ../../source/user_guide/setting/authentication.rst:39
+msgid "create new wecom app"
+msgstr "创建新的企业微信应用"
+
+#: ../../source/user_guide/setting/authentication.rst:38
+msgid "web app authorization configure"
+msgstr "web应用授权配置"
+
+#: ../../source/user_guide/setting/authentication.rst:44
+msgid "add callback domain"
+msgstr "新增重定向域名"
+
+#: ../../source/user_guide/setting/authentication.rst:45
+msgid "new wecom app callback domain"
+msgstr "新企业微信应用回调域名"
+
+#: ../../source/user_guide/setting/authentication.rst:50
+msgid "add Company's Trusted IP"
+msgstr "添加企业可信IP"
+
+#: ../../source/user_guide/setting/authentication.rst:51
+msgid "add company's trusted ip"
+msgstr "添加企业可信IP"
+

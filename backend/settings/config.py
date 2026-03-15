@@ -1,7 +1,8 @@
 from settings.common import *
 
-# for multi computer room deploy and use separate redis server
-DEPLOY_ZONE = ''
+DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
+LOGGING_LEVEL = os.getenv('LOGGING_LEVEL', 'INFO').upper()
+
 ALLOWED_HOSTS = ['*']
 MIDDLEWARE = [
     'service.csrf_service.DisableCSRF',
@@ -28,14 +29,14 @@ DATABASES = {
             'USER': os.getenv('DB_USER', 'loonflow'),
             'PASSWORD': os.getenv('DB_PASS', '123456'),
             'HOST': os.getenv('DB_HOST', '127.0.0.1'),
-            'PORT': '5432',
+            'PORT': os.getenv('POSTGRES_PORT', '5432')
         }
 }
 
-REDIS_HOST = '127.0.0.1'
-REDIS_PORT = 6379
-REDIS_DB = 0
-REDIS_PASSWORD = ''
+REDIS_HOST = os.getenv('REDIS_HOST', '127.0.0.1')
+REDIS_PORT = os.getenv('REDIS_PORT', 6379)
+REDIS_DB = os.getenv('REDIS_DB', 0)
+REDIS_PASSWORD = os.getenv('REDIS_PASSWORD', '')
 
 if REDIS_PASSWORD:
     CELERY_BROKER_URL = 'redis://:{}@{}:{}/{}'.format(REDIS_PASSWORD, REDIS_HOST, REDIS_PORT, REDIS_DB)
@@ -44,11 +45,10 @@ else:
 
 HOOK_HOST_FORBIDDEN = []  # host list that not allowed be used as hook url(include state hook and notice hook), such as ['192,168.1.12', '*.baidu.com'], if no this setting key means allow all
 
-JWT_SALT = 'aUApFqfQjyYVAPo8'
-ENCRYPTION_KEY = '2VLMQOroSgJUC68n30X9VzFkUPzN0oYpprGlwy/ffmk='   # you can generate your key, refer to document
 
-# 前端根 URL，用于 OAuth 回调后重定向（如 Microsoft OIDC 回调由浏览器直接打开时跳转到前端首页）
-FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000').rstrip('/')
+JWT_SALT = os.getenv('JWT_SALT', 'aUApFqfQjyYVAPo8')
+ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY', '2VLMQOroSgJUC68n30X9VzFkUPzN0oYpprGlwy/ffmk=')   # you can generate your key, refer to document
+
 
 LOGGING = {
         'version': 1,
@@ -65,13 +65,13 @@ LOGGING = {
         },
         'handlers': {
             'file_handler': {
-                'level': 'DEBUG',
+                'level': LOGGING_LEVEL,
                 'class': 'logging.FileHandler',
                 'filename': HOMEPATH + '/loonflow.log',
                 'formatter': 'standard'
             },
             'console': {
-                'level': 'DEBUG',
+                'level': LOGGING_LEVEL,
                 'filters': ['require_debug_true'],
                 'class': 'logging.StreamHandler',
                 'formatter': 'standard'
@@ -81,12 +81,12 @@ LOGGING = {
             'django': {
                 'handlers': ['file_handler'],
                 'propagate': True,
-                'level': 'INFO',
+                'level': LOGGING_LEVEL,
                         },
             'django.db.backends': {
                 'handlers': ['console'],
                 'propagate': True,
-                'level': 'INFO',
+                'level': LOGGING_LEVEL,
             }
         }
     }

@@ -14,14 +14,19 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import WecomQRLogin from './components/Auth/WecomQRLogin';
 import useSnackbar from './hooks/useSnackbar';
-import { getEnabledOAuthTypes, getWecomAuthUrl } from './services/auth';
+import {
+  getEnabledOAuthTypes,
+  getWecomAuthUrl,
+  getMicrosoftOidcAuthUrl,
+  microsoftOidcOAuthCallback,
+} from './services/auth';
 import { login } from './services/authService';
 import { getMyProfile } from './services/user';
-import { loginState } from './store';
+import { loginState, type RootState } from './store';
 import { setCookie } from './utils/cookie';
 import { getJwtExpiration } from './utils/jwt';
 
@@ -56,10 +61,22 @@ export default function SignIn() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { showMessage } = useSnackbar();
+  const currentTenantId = useSelector((state: RootState) => state.tenant?.tenantInfo?.id ?? undefined);
 
   useEffect(() => {
     // Load available OAuth login methods
     loadOAuthTypes();
+  }, []);
+
+  useEffect(() => {
+    // Microsoft OIDC callback handling: when URL contains code and state=ms_oidc_login, automatically complete login
+    const url = new URL(window.location.href);
+    const code = url.searchParams.get('code');
+    const state = url.searchParams.get('state');
+    if (code && state === 'ms_oidc_login') {
+      handleMicrosoftOidcCallback(code);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadOAuthTypes = async () => {
@@ -73,6 +90,42 @@ export default function SignIn() {
     } catch (error) {
       // Ignore errors, don't show OAuth login options
       console.error('Failed to load OAuth types:', error);
+    }
+  };
+
+  const handleMicrosoftOidcCallback = async (code: string) => {
+    try {
+      const responseData = await microsoftOidcOAuthCallback(code);
+      if (responseData.code === -1) {
+        showMessage(responseData.msg || 'Microsoft login failed', 'error');
+        return;
+      }
+      const token = responseData.data.jwt;
+      const expiration = getJwtExpiration(token);
+      setCookie('jwtToken', token, {
+        sameSite: 'strict',
+        expires: expiration,
+      });
+
+      dispatch(loginState(token));
+      try {
+        const userProfileResponse = await getMyProfile();
+        if (userProfileResponse.code === 0 && userProfileResponse.data.myProfile.lang) {
+          const userLang = userProfileResponse.data.myProfile.lang;
+          const localStorageLang = localStorage.getItem('i18nextLng');
+
+          if (localStorageLang !== userLang) {
+            i18n.changeLanguage(userLang);
+          }
+        }
+      } catch (profileError) {
+        console.error('get userprofile fail:', profileError);
+      }
+
+      navigate('/');
+    } catch (error: any) {
+      showMessage(error.message || 'Microsoft OAuth login failed', 'error');
+      console.error('Microsoft OAuth login fail:', error);
     }
   };
 
@@ -116,21 +169,28 @@ export default function SignIn() {
     try {
       if (type === 'wecom') {
         // get wechat config and open scan login dialog
-        const response = await getWecomAuthUrl();
-        if (response.code === 0) {
-          const { appid, agentid, redirectUri } = response.data;
+        const wecomRes = await getWecomAuthUrl(currentTenantId);
+        if (wecomRes.code === 0) {
+          const { appid, agentid, redirectUri } = wecomRes.data;
           if (appid && agentid && redirectUri) {
             //use scan login method
             setWecomConfig({ appid, agentid, redirectUri });
             setShowWecomDialog(true);
-          } else if (response.data.authUrl) {
+          } else if (wecomRes.data.authUrl) {
             // downgrade to redirect method
-            window.location.href = response.data.authUrl;
+            window.location.href = wecomRes.data.authUrl;
           } else {
             showMessage('wechat config is incomplete', 'error');
           }
         } else {
-          showMessage(response.msg || 'get auth url failed', 'error');
+          showMessage(wecomRes.msg || 'get auth url failed', 'error');
+        }
+      } else if (type === 'microsoft_oidc') {
+        const msOidcRes = await getMicrosoftOidcAuthUrl(currentTenantId);
+        if (msOidcRes.code === 0 && msOidcRes.data && msOidcRes.data.authUrl) {
+          window.location.href = msOidcRes.data.authUrl;
+        } else {
+          showMessage(msOidcRes.msg || 'get Microsoft OIDC auth url failed', 'error');
         }
       } else {
         showMessage('this login method is not implemented yet', 'info');
@@ -145,7 +205,7 @@ export default function SignIn() {
       wecom: t('signIn.wecomLogin'),
       dingtalk: t('signIn.dingtalkLogin'),
       feishu: t('signIn.feishuLogin'),
-      microsoft: t('signIn.microsoftLogin'),
+      microsoft_oidc: t('signIn.microsoftLogin'),
     };
     return texts[type] || type;
   };

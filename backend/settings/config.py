@@ -2,7 +2,7 @@ from settings.common import *
 
 # for multi computer room deploy and use separate redis server
 DEPLOY_ZONE = ''
-
+ALLOWED_HOSTS = ['*']
 MIDDLEWARE = [
     'service.csrf_service.DisableCSRF',
     'django.middleware.security.SecurityMiddleware',
@@ -46,6 +46,9 @@ HOOK_HOST_FORBIDDEN = []  # host list that not allowed be used as hook url(inclu
 
 JWT_SALT = 'aUApFqfQjyYVAPo8'
 ENCRYPTION_KEY = '2VLMQOroSgJUC68n30X9VzFkUPzN0oYpprGlwy/ffmk='   # you can generate your key, refer to document
+
+# 前端根 URL，用于 OAuth 回调后重定向（如 Microsoft OIDC 回调由浏览器直接打开时跳转到前端首页）
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000').rstrip('/')
 
 LOGGING = {
         'version': 1,

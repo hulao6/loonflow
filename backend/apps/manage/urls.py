@@ -1,8 +1,13 @@
 from django.urls import path
 from apps.manage.views import index, CommonConfigView, NotificationView, SimpleNotificationView, NotificationDetailView
 from apps.manage.auth_views import (
-    AuthConfigView, AuthConfigDetailView,
-    AuthLoginView, AuthWecomAuthView, AuthWecomCallbackView
+    AuthConfigView,
+    AuthConfigDetailView,
+    AuthLoginView,
+    AuthWecomAuthView,
+    AuthWecomCallbackView,
+    AuthMicrosoftOidcAuthView,
+    AuthMicrosoftOidcCallbackView,
 )
 
 urlpatterns = [
@@ -18,4 +23,6 @@ urlpatterns = [
     path("/auth/login", AuthLoginView.as_view()),
     path("/auth/wecom/auth", AuthWecomAuthView.as_view()),
     path("/auth/wecom/callback", AuthWecomCallbackView.as_view()),
+    path("/auth/microsoft_oidc/auth", AuthMicrosoftOidcAuthView.as_view()),
+    path("/auth/microsoft_oidc/callback", AuthMicrosoftOidcCallbackView.as_view()),
 ]

@@ -4,13 +4,18 @@ Auth views
 import json
 import logging
 import traceback
+from urllib.parse import quote, urlencode
+
+from django.conf import settings as django_settings
+from django.http import HttpResponseRedirect
 from django.utils.decorators import method_decorator
 from schema import Schema, And, Optional
+
 from apps.loon_base_view import BaseView
-from service.format_response import api_response
-from service.permission.user_permission import user_permission_check
-from service.manage.auth_service import auth_service_ins
 from service.exception.custom_common_exception import CustomCommonException
+from service.format_response import api_response
+from service.manage.auth_service import auth_service_ins
+from service.permission.user_permission import user_permission_check
 
 logger = logging.getLogger("django")
 
@@ -131,7 +136,6 @@ class AuthConfigDetailView(BaseView):
             auth_service_ins.update_auth_config(
                 tenant_id=tenant_id,
                 config_id=config_id,
-                name=request_data.get('name'),
                 client_id=request_data.get('client_id'),
                 client_secret=request_data.get('client_secret'),
                 redirect_uri=request_data.get('redirect_uri'),
@@ -228,3 +232,69 @@ class AuthWecomCallbackView(BaseView):
         except Exception as e:
             logger.error(traceback.format_exc())
             return api_response(-1, "Internal Server Error", {})
+
+
+class AuthMicrosoftOidcAuthView(BaseView):
+    """Microsoft OIDC auth information (can be accessed without login)"""
+
+    def get(self, request, *args, **kwargs):
+        """
+        Get Microsoft OIDC auth URL, front end gets it and jumps to login
+        """
+        tenant_id = request.META.get('HTTP_TENANTID', '00000000-0000-0000-0000-000000000001')
+
+        try:
+            flag, result = auth_service_ins.get_microsoft_oidc_auth_url(tenant_id)
+            if flag:
+                return api_response(0, "", result)
+            else:
+                return api_response(-1, result.get('msg', 'Failed to get auth config'), {})
+        except Exception as e:
+            logger.error(traceback.format_exc())
+            return api_response(-1, "Internal Server Error", {})
+
+
+class AuthMicrosoftOidcCallbackView(BaseView):
+    """Microsoft OIDC callback (can be accessed without login)"""
+
+    def get(self, request, *args, **kwargs):
+        """
+        Handle Microsoft OIDC callback:
+        - If the request comes from a browser directly opening the callback URL (Accept is not application/json), set the JWT Cookie and redirect to the front end homepage to avoid the page only displaying JSON.
+        - If the request comes from the front end AJAX (Accept contains application/json), return JSON, which the front end uses when calling the interface in the redirect_uri page.
+        """
+        tenant_id = request.META.get('HTTP_TENANTID', '00000000-0000-0000-0000-000000000001')
+        code = request.GET.get('code')
+
+        if not code:
+            if self._wants_json(request):
+                return api_response(-1, "Authorization code missing", {})
+            return HttpResponseRedirect(f"/signIn?error=" + quote("Authorization code missing"))
+
+        try:
+            flag, result = auth_service_ins.microsoft_oidc_callback(tenant_id, code)
+
+            if self._wants_json(request):
+                if flag:
+                    return api_response(0, "", result)
+                return api_response(-1, result.get('msg', 'Login failed'), {})
+            if flag:
+                token = result.get('jwt', '')
+                fragment = urlencode({'token': token}) if token else ''
+                redirect_url = f"/oauth/microsoft/callback"
+                if fragment:
+                    redirect_url += "#" + fragment
+                return HttpResponseRedirect(redirect_url)
+            return HttpResponseRedirect(
+                f"/signIn?error=" + quote(result.get('msg', 'Login failed'))
+            )
+        except Exception as e:
+            logger.error(traceback.format_exc())
+            if self._wants_json(request):
+                return api_response(-1, "Internal Server Error", {})
+            return HttpResponseRedirect(f"/signIn?error=" + quote("Internal Server Error"))
+
+    @staticmethod
+    def _wants_json(request):
+        accept = request.META.get('HTTP_ACCEPT', '')
+        return 'application/json' in accept

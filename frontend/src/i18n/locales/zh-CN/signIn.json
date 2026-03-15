@@ -24,5 +24,6 @@
   "handleWecomMessageFailed": "处理企业微信消息失败",
   "initializeWecomLoginPanelFailed": "初始化企业微信登录面板失败",
   "loadingScanLogin": "正在扫码登录",
-  "pleaseUseWecomScanLogin": "请使用企业微信扫码登录"
+  "pleaseUseWecomScanLogin": "请使用企业微信扫码登录",
+  "microsoftLogin": "微软账号登录"
 }

@@ -22,6 +22,8 @@ const PUBLIC_URLS = [
   '/api/v1.0/manage/auth/feishu/callback',
   '/api/v1.0/manage/auth/microsoft/auth',
   '/api/v1.0/manage/auth/microsoft/callback',
+  '/api/v1.0/manage/auth/microsoft_oidc/auth',
+  '/api/v1.0/manage/auth/microsoft_oidc/callback',
 ];
 
 apiClient.interceptors.request.use(

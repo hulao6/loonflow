@@ -1,9 +1,9 @@
 import apiClient from './api';
 
-/** 认证类型 */
+/** Authentication type */
 export type AuthConfigType = 'wecom' | 'microsoft_oidc';
 
-/** 列表项：名称、类型、状态、创建时间（及 id 用于编辑/删除） */
+/** List item: name, type, status, created time (and id for edit/delete) */
 export interface AuthConfigListItem {
   id: string;
   name: string;
@@ -13,7 +13,7 @@ export interface AuthConfigListItem {
   createdAt: string;
 }
 
-/** 详情/表单：包含完整字段，按类型有 agentId 或 azureTenantId */
+/** Details/form: contains all fields, based on type has agentId or azureTenantId */
 export interface AuthConfig {
   id: string;
   type: AuthConfigType;
@@ -129,9 +129,14 @@ export const getEnabledOAuthTypes = async () => {
 
 /**
  * Get Wecom authorization URL
+ * @param tenantId - Optional tenant id from Redux tenant.tenantInfo.id, sent as HTTP_TENANTID header
  */
-export const getWecomAuthUrl = async () => {
-  const response = await apiClient.get('/api/v1.0/manage/auth/wecom/auth');
+export const getWecomAuthUrl = async (tenantId?: string) => {
+  const headers: Record<string, string> = {};
+  if (tenantId) {
+    headers['Tenantid'] = tenantId; // Django reads as request.META['HTTP_TENANTID']
+  }
+  const response = await apiClient.get('/api/v1.0/manage/auth/wecom/auth', { headers });
   return response.data;
 };
 
@@ -140,6 +145,31 @@ export const getWecomAuthUrl = async () => {
  */
 export const wecomOAuthCallback = async (code: string) => {
   const response = await apiClient.get('/api/v1.0/manage/auth/wecom/callback', {
+    params: { code },
+  });
+  return response.data;
+};
+
+/**
+ * Get Microsoft OIDC authorization URL
+ * @param tenantId - Optional tenant id from Redux tenant.tenantInfo.id, sent as HTTP_TENANTID header
+ */
+export const getMicrosoftOidcAuthUrl = async (tenantId?: string) => {
+  const headers: Record<string, string> = {};
+  if (tenantId) {
+    headers['Tenantid'] = tenantId; // Django reads as request.META['HTTP_TENANTID']
+  }
+  const response = await apiClient.get('/api/v1.0/manage/auth/microsoft_oidc/auth', { headers });
+  return response.data;
+};
+
+/**
+ * Microsoft OIDC OAuth callback
+ * Frontend should run on redirect_uri page, read ?code=xxx from URL,
+ * then call this API to complete login.
+ */
+export const microsoftOidcOAuthCallback = async (code: string) => {
+  const response = await apiClient.get('/api/v1.0/manage/auth/microsoft_oidc/callback', {
     params: { code },
   });
   return response.data;

@@ -110,6 +110,35 @@ class AuthService:
             ),
         }
 
+    def get_microsoft_oidc_auth_url(self, tenant_id: str) -> Tuple[bool, Dict]:
+        """
+        获取 Microsoft OIDC 授权地址配置，前端拿到后直接跳转到该 URL 进行登录。
+        """
+        config = self.get_auth_config_by_type(tenant_id, "microsoft_oidc")
+        if not config or not isinstance(config, MicrosoftOidcAuthConfig):
+            return False, {"msg": "Microsoft OIDC config not found or disabled"}
+
+        if not config.azure_tenant_id:
+            return False, {"msg": "Microsoft OIDC config missing azure_tenant_id"}
+
+        # 按照 Microsoft identity platform v2.0 的标准授权地址拼装
+        authorize_url = (
+            f"https://login.microsoftonline.com/{config.azure_tenant_id}/oauth2/v2.0/authorize"
+            f"?client_id={config.client_id}"
+            f"&response_type=code"
+            f"&redirect_uri={quote_plus(config.redirect_uri)}"
+            f"&response_mode=query"
+            f"&scope={quote_plus('openid profile email offline_access https://graph.microsoft.com/user.read')}"
+            f"&state=ms_oidc_login"
+        )
+
+        return True, {
+            "client_id": config.client_id,
+            "redirect_uri": config.redirect_uri,
+            "azure_tenant_id": config.azure_tenant_id,
+            "auth_url": authorize_url,
+        }
+
     def wecom_callback(self, tenant_id: str, code: str) -> Tuple[bool, Dict]:
         config = self.get_auth_config_by_type(tenant_id, "wecom")
         if not config or not isinstance(config, WecomAuthConfig):
@@ -158,6 +187,92 @@ class AuthService:
             return False, {"msg": f"OAuth request failed: {str(e)}"}
         except Exception as e:
             logger.error(f"Wecom OAuth callback failed: {str(e)}")
+            return False, {"msg": f"OAuth callback failed: {str(e)}"}
+
+    def microsoft_oidc_callback(self, tenant_id: str, code: str) -> Tuple[bool, Dict]:
+        """
+        Microsoft OIDC 回调处理：
+        1. 用 code 换取 access_token
+        2. 使用 access_token 调 Microsoft Graph 获取用户信息
+        3. 根据邮箱在本系统中匹配用户并签发 JWT
+        """
+        config = self.get_auth_config_by_type(tenant_id, "microsoft_oidc")
+        if not config or not isinstance(config, MicrosoftOidcAuthConfig):
+            return False, {"msg": "Microsoft OIDC config not found or disabled"}
+
+        try:
+            secret = _safe_decrypt(config.client_secret)
+            token_url = f"https://login.microsoftonline.com/{config.azure_tenant_id}/oauth2/v2.0/token"
+            # 按 OAuth2.0 标准使用 application/x-www-form-urlencoded 方式换 token
+            data = {
+                "client_id": config.client_id,
+                "client_secret": secret,
+                "grant_type": "authorization_code",
+                "code": code,
+                "redirect_uri": config.redirect_uri,
+                "scope": "openid profile email offline_access https://graph.microsoft.com/user.read",
+            }
+            token_response = requests.post(token_url, data=data, timeout=10)
+            token_data = token_response.json()
+
+            if "error" in token_data:
+                logger.error(f"Failed to get Microsoft OIDC token: {token_data}")
+                return False, {
+                    "msg": f"Failed to get token: {token_data.get('error_description') or token_data.get('error')}"
+                }
+
+            access_token = token_data.get("access_token")
+            if not access_token:
+                return False, {"msg": "No access_token in Microsoft OIDC token response"}
+
+            # 调 Graph API 获取用户信息
+            me_url = "https://graph.microsoft.com/v1.0/me"
+            headers = {"Authorization": f"Bearer {access_token}"}
+            me_response = requests.get(me_url, headers=headers, timeout=10)
+            me_data = me_response.json()
+
+            if me_response.status_code >= 400 or "error" in me_data:
+                logger.error(f"Failed to get Microsoft Graph user info: {me_data}")
+                return False, {
+                    "msg": "Failed to get user info from Microsoft Graph",
+                }
+
+            # 从返回中尽可能拿到邮箱
+            email = (
+                me_data.get("mail")
+                or me_data.get("userPrincipalName")
+                or me_data.get("preferred_username")
+            )
+            display_name = me_data.get("displayName") or ""
+
+            if not email:
+                return False, {"msg": "Microsoft account does not provide email, cannot login"}
+
+            # 用邮箱 + tenant 匹配系统用户
+            user = User.objects.filter(email__iexact=email, tenant_id=tenant_id).first()
+            if not user:
+                return False, {
+                    "msg": "No system user bound to this Microsoft account email, please contact administrator"
+                }
+
+            flag, jwt_token = account_user_service_ins.get_user_jwt(user.email)
+            if not flag:
+                return False, {"msg": "Failed to generate JWT"}
+
+            return True, {
+                "jwt": jwt_token,
+                "user_info": {
+                    "id": str(user.id),
+                    "name": user.name or display_name or email,
+                    "email": user.email,
+                    "avatar": user.avatar,
+                },
+            }
+        except requests.RequestException as e:
+            logger.error(f"Microsoft OIDC request failed: {str(e)}")
+            return False, {"msg": f"OAuth request failed: {str(e)}"}
+        except Exception as e:
+            logger.error(f"Microsoft OIDC callback failed: {str(e)}")
             return False, {"msg": f"OAuth callback failed: {str(e)}"}
 
     def add_auth_config(

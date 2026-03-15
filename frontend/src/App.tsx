@@ -6,6 +6,7 @@ import { getTenantByDomain } from './services/tenant';
 import { setTenantBasicInfo } from './store';
 import PrivateRoute from './utils/PrivateRoute';
 
+import MicrosoftOidcCallback from './components/Auth/MicrosoftOidcCallback';
 import WecomCallback from './components/Auth/WecomCallback';
 import Layout from './components/layout';
 import Role from './components/Organization/Role';
@@ -62,6 +63,11 @@ const App = () => {
       key={'oauth-wecom-callback'}
       path={'/oauth/wecom/callback'}
       element={<WecomCallback />}
+    />,
+    <Route
+      key={'oauth-microsoft-callback'}
+      path={'/oauth/microsoft/callback'}
+      element={<MicrosoftOidcCallback />}
     />,
     <Route
       key={'root'}

@@ -26,5 +26,6 @@
   "handleWecomMessageFailed": "handle wecom message failed",
   "initializeWecomLoginPanelFailed": "initialize wecom login panel failed",
   "loadingScanLogin": "loading scan login",
-  "pleaseUseWecomScanLogin": "please use wecom scan login"
+  "pleaseUseWecomScanLogin": "please use wecom scan login",
+  "microsoftLogin": "signin with microsoft"
 }

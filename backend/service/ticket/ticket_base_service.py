@@ -2,7 +2,9 @@ import copy
 import json
 import datetime
 import logging
+import os
 import random
+import shutil
 
 import redis
 from django.db import transaction
@@ -32,6 +34,54 @@ from service.workflow.workflow_node_service import workflow_node_service_ins
 from service.workflow.workflow_edge_service import workflow_edge_service_ins
 from service.workflow.workflow_permission_service import workflow_permission_service_ins
 from service.workflow.workflow_component_service import workflow_component_service_ins
+
+DRAFT_FILE_URL_PREFIX = "/api/v1.0/tickets/draft/files/"
+
+
+def _migrate_draft_files_in_fields(tenant_id, ticket_id, fields_dict, upload_dir):
+    """migrate draft files in fields to ticket directory"""
+    if not fields_dict or not upload_dir:
+        return fields_dict
+    result = copy.deepcopy(fields_dict)
+    for field_key, field_value in result.items():
+        try:
+            arr = json.loads(field_value) if isinstance(field_value, str) else field_value
+            if not isinstance(arr, list):
+                continue
+            new_list = []
+            for item in arr:
+                if not isinstance(item, dict) or 'file_path' not in item:
+                    new_list.append(item)
+                    continue
+                fp = item.get('file_path') or ''
+                if not fp.startswith(DRAFT_FILE_URL_PREFIX):
+                    new_list.append(item)
+                    continue
+                # /api/v1.0/tickets/draft/files/{safe_name}
+                safe_name = fp[len(DRAFT_FILE_URL_PREFIX):].strip('/').split('/')[-1]
+                if not safe_name:
+                    new_list.append(item)
+                    continue
+                draft_path = os.path.join(upload_dir, 'draft', safe_name)
+                if not os.path.isfile(draft_path):
+                    new_list.append(item)
+                    continue
+                ticket_dir = os.path.join(upload_dir, str(ticket_id))
+                try:
+                    os.makedirs(ticket_dir, exist_ok=True)
+                except OSError:
+                    continue
+                dest_path = os.path.join(ticket_dir, safe_name)
+                try:
+                    shutil.move(draft_path, dest_path)
+                except (OSError, shutil.Error):
+                    continue
+                new_url = "/api/v1.0/tickets/{}/files/{}".format(ticket_id, safe_name)
+                new_list.append(dict(item, file_path=new_url))
+            result[field_key] = json.dumps(new_list) if isinstance(field_value, str) else new_list
+        except (json.JSONDecodeError, TypeError, ValueError):
+            continue
+    return result
 
 
 class TicketBaseService(BaseService):
@@ -263,6 +313,14 @@ class TicketBaseService(BaseService):
                                      workflow_version_id=version_id)
         ticket_record.save()
         ticket_id = ticket_record.id
+
+        # 新建工单时：将 fields 中的草稿附件 URL 迁移到工单目录并替换为正式 URL
+        loonflow_data_dir = getattr(settings, 'LOONFLOW_DATA_DIR', None)
+        if loonflow_data_dir and request_data_dict.get('fields'):
+            upload_dir = os.path.join(loonflow_data_dir, str(tenant_id), 'ticket_uploads')
+            request_data_dict['fields'] = _migrate_draft_files_in_fields(
+                tenant_id, ticket_id, request_data_dict['fields'], upload_dir
+            )
 
         # add ticket cc_to user record
         ticket_user_service_ins.add_record(tenant_id, operator_id, ticket_id, True, False, False, False)
@@ -756,13 +814,13 @@ class TicketBaseService(BaseService):
         """
         ticket_obj = TicketRecord.objects.filter(tenant_id=tenant_id, id=ticket_id).first()
         if not ticket_obj:
-            return CustomCommonException("ticket is not existed or has been deleted")
-        
+            raise CustomCommonException("ticket is not existed or has been deleted")
+
         user_obj = account_user_service_ins.get_user_by_user_id(tenant_id, user_id)
         if user_obj.type == 'admin':
             return True
         workflow_ticket_view_permission = workflow_permission_service_ins.user_workflow_permission_check(tenant_id, ticket_obj.workflow_id, ticket_obj.workflow_version_id, user_id, 'view')
-        if workflow_base_service_ins:
+        if workflow_ticket_view_permission:
             return True
         
         # check relation permission

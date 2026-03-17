@@ -7,6 +7,7 @@ import {
     Person as CreatorIcon,
     AcUnit as DefaultIcon,
     Groups as GroupsIcon,
+    InsertDriveFile as FileIcon,
     Pin as NumberIcon,
     RadioButtonChecked as RadioButtonIcon,
     Schedule,
@@ -155,17 +156,16 @@ const getBasicComponentTemplates = (t: any): ComponentTemplate[] => [
             }
         }
     },
-    // {
-    //     type: 'file',
-    //     componentName: t('workflow.componentCategories.fileComponent'),
-    //     icon: <FileIcon />,
-    //     defaultProps: {
-    //         // label: '附件',
-    //         description: '',
-    //         fieldKey: '',
-    //         layout: { span: 6 }
-    //     }
-    // },
+    {
+        type: 'file',
+        componentName: t('workflow.componentCategories.fileComponent'),
+        icon: <FileIcon />,
+        defaultProps: {
+            description: '',
+            fieldKey: '',
+            layout: { span: 6 }
+        }
+    },
     {
         type: 'user',
         componentName: t('workflow.componentCategories.userComponent'),

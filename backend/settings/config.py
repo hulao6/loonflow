@@ -16,8 +16,13 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-MEDIA_URL = '/media/'
+
+# ticket's attachment will be saved at {TICKET_UPLOAD_DIR}/{tenant_id}/{ticket_id}/filename
+LOONFLOW_DATA_DIR = os.environ.get(
+    'LOONFLOW_DATA_DIR',
+    os.path.expanduser('~/loonflow_data'),
+)
+# TICKET_UPLOAD_DIR = os.path.join(LOONFLOW_DATA_DIR, 'ticket_uploads')
 
 # Database
 # https://docs.djangoproject.com/en/1.11/ref/settings/#databases

@@ -1,3 +1,4 @@
+import json
 from apps.ticket.models import CustomField as TicketCustomField
 from service.ticket.ticket_user_service import ticket_user_service_ins
 from service.account.account_base_service import account_base_service_ins
@@ -29,7 +30,7 @@ class TicketFieldService(BaseService):
             return "datetime_value"
         elif field_type == "time":
             return "time_value"
-        elif field_type in ["rich_text", "textarea"]:
+        elif field_type in ["rich_text", "textarea", "file"]:
             return "rich_text_value"
     
     @classmethod
@@ -43,8 +44,10 @@ class TicketFieldService(BaseService):
         ticket_obj_queryset = TicketCustomField.objects.filter(ticket_id=ticket_id, tenant_id=tenant_id).all()
         result_dict = {}
         for ticket_custom_field in ticket_obj_queryset:
-            if ticket_custom_field.field_type in ("text", "select", "cascade", "user", "department", "file"):
+            if ticket_custom_field.field_type in ("text", "select", "cascade", "user", "department"):
                 result_dict[ticket_custom_field.field_key] = ticket_custom_field.common_value
+            elif ticket_custom_field.field_type == "file":
+                result_dict[ticket_custom_field.field_key] = ticket_custom_field.rich_text_value
             elif ticket_custom_field.field_type == "number":
                 result_dict[ticket_custom_field.field_key] = ticket_custom_field.number_value
             elif ticket_custom_field.field_type == "date":
@@ -143,8 +146,10 @@ class TicketFieldService(BaseService):
         """
         result_dict = {}
         ticket_custom_field_obj = TicketCustomField.objects.get(ticket_id=ticket_id, tenant_id=tenant_id, field_key=field_key)
-        if ticket_custom_field_obj.field_type in ("text", "select", "cascade", "user", "file"):
-                result_dict[ticket_custom_field_obj.field_key] = ticket_custom_field_obj.common_value
+        if ticket_custom_field_obj.field_type in ("text", "select", "cascade", "user"):
+            result_dict[ticket_custom_field_obj.field_key] = ticket_custom_field_obj.common_value
+        elif ticket_custom_field_obj.field_type == "file":
+            result_dict[ticket_custom_field_obj.field_key] = ticket_custom_field_obj.rich_text_value
         elif ticket_custom_field_obj.field_type == "number":
             result_dict[ticket_custom_field_obj.field_key] = ticket_custom_field_obj.number_value
         elif ticket_custom_field_obj.field_type == "date":
@@ -182,16 +187,20 @@ class TicketFieldService(BaseService):
         ticket_custom_field_queryset = TicketCustomField.objects.filter(ticket_id=ticket_id, tenant_id=tenant_id).all()
         exist_field_key_list = [ticket_custom_field.field_key for ticket_custom_field in ticket_custom_field_queryset]
         for field_key in field_info_dict.keys():
-            if field_key in exist_field_key_list:
-                if type(field_info_dict.get(field_key)) == list:
-                    need_update_field_value_list.append({field_key: ','.join(field_info_dict.get(field_key))})
-                else:
-                    need_update_field_value_list.append({field_key: field_info_dict.get(field_key)})
+            if field_key == 'title' or field_key not in field_key_type_dict:
+                continue
+            raw_value = field_info_dict.get(field_key)
+            field_type = field_key_type_dict.get(field_key)
+            if field_type == 'file' and isinstance(raw_value, list):
+                store_value = json.dumps(raw_value, ensure_ascii=False)
+            elif type(raw_value) == list:
+                store_value = ','.join(str(x) for x in raw_value)
             else:
-                if type(field_info_dict.get(field_key)) == list:
-                    need_add_field_value_list.append({field_key: ','.join(field_info_dict.get(field_key))})
-                else:
-                    need_add_field_value_list.append({field_key: field_info_dict.get(field_key)})
+                store_value = raw_value
+            if field_key in exist_field_key_list:
+                need_update_field_value_list.append({field_key: store_value})
+            else:
+                need_add_field_value_list.append({field_key: store_value})
 
 
         for need_update_field_value in need_update_field_value_list:

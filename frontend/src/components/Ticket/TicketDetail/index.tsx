@@ -335,6 +335,7 @@ function TicketDetail({ workflowId, workflowVersionName, ticketId, onTicketHandl
                             handleComponentUpdate={(updatedComponent) => {
                               updateFormValue(updatedComponent)
                             }}
+                            ticketId={ticketId}
                           />
                         </Box>
                       </Box>

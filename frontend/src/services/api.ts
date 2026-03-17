@@ -34,7 +34,10 @@ apiClient.interceptors.request.use(
     if (token && !isPublicUrl) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    if (config.data && typeof config.data === 'object') {
+    if (config.data instanceof FormData && config.headers) {
+      // FormData 上传时不要带 Content-Type，由浏览器自动设置 multipart/form-data; boundary=...
+      delete config.headers['Content-Type'];
+    } else if (config.data && typeof config.data === 'object') {
       config.data = snakecaseKeys(config.data, { deep: true });
     }
     if (config.params && typeof config.params === 'object') {
@@ -50,6 +53,9 @@ apiClient.interceptors.request.use(
 
 apiClient.interceptors.response.use(
   (response) => {
+    if (response.config.responseType === 'blob' || response.data instanceof Blob) {
+      return response;
+    }
     if (response.data && typeof response.data === 'object') {
       response.data = camelcaseKeys(response.data, { deep: true });
     }

@@ -1,6 +1,10 @@
 import json
 import logging
+import os
 import traceback
+import uuid
+from django.conf import settings
+from django.http import FileResponse, Http404
 from schema import Schema, And, Or, Use, Optional
 from apps.loon_base_view import BaseView
 from service.format_response import api_response
@@ -145,7 +149,10 @@ class TicketDetailFormView(BaseView):
             return api_response(-1, "Internal Server Error", '')
         
         # check whether user has view permission
-        user_view_permission = ticket_base_service_ins.ticket_view_permission_check(tenant_id, ticket_id, operator_id)
+        try:
+            user_view_permission = ticket_base_service_ins.ticket_view_permission_check(tenant_id, ticket_id, operator_id)
+        except CustomCommonException as e:
+            return api_response(-1, str(e), '')
         if not user_view_permission:
             return api_response(-1, "user has no view permission", '')
 
@@ -275,6 +282,208 @@ class TicketFlowHistoryView(BaseView):
 
         return api_response(0, '', dict(ticket_flow_history_list = result['ticket_flow_history_object_format_list'], 
         total=result['paginator_info']['total'], page=result['paginator_info']['page'], per_page=result['paginator_info']['per_page']))
+
+
+class TicketDraftFileUploadView(BaseView):
+    """
+    Draft file upload for new ticket: save to {upload_dir}/{tenant_id}/draft/{upload_id}/, return draft URL; migrate to ticket directory when creating ticket
+    """
+    def post(self, request, *args, **kwargs):
+        app_name = request.META.get('HTTP_APPNAME')
+        tenant_id = request.META.get('HTTP_TENANTID')
+        if not tenant_id:
+            return api_response(-1, "tenant required", '')
+
+        loonflow_data_dir = getattr(settings, 'LOONFLOW_DATA_DIR', None)
+        if not loonflow_data_dir:
+            return api_response(-1, "LOONFLOW_DATA_DIR not configured", '')
+        upload_dir = os.path.join(loonflow_data_dir, tenant_id, 'ticket_uploads')
+
+        if 'file' not in request.FILES:
+            return api_response(-1, "no file in request", '')
+
+        uploaded = request.FILES['file']
+        ext = os.path.splitext(uploaded.name)[1] or ''
+        if ext and not ext.startswith('.'):
+            ext = '.' + ext
+        safe_name = str(uuid.uuid4()) + ext
+        dir_path = os.path.join(upload_dir, 'draft')
+        try:
+            os.makedirs(dir_path, exist_ok=True)
+        except OSError:
+            logger.error(traceback.format_exc())
+            return api_response(-1, "failed to create upload directory", '')
+
+        file_path = os.path.join(dir_path, safe_name)
+        try:
+            with open(file_path, 'wb') as f:
+                for chunk in uploaded.chunks():
+                    f.write(chunk)
+        except OSError:
+            logger.error(traceback.format_exc())
+            return api_response(-1, "failed to save file", '')
+
+        draft_url = f"/api/v1.0/tickets/draft/files/{safe_name}"
+        return api_response(0, '', dict(url=draft_url, name=uploaded.name, size=uploaded.size))
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.method.lower() in self.http_method_names:
+            handler = getattr(self, request.method.lower(), self.http_method_not_allowed)
+        else:
+            handler = self.http_method_not_allowed
+        return handler(request, *args, **kwargs)
+
+
+class TicketDraftFileDownloadView(BaseView):
+    """
+    Draft file download for new ticket: download the file from {upload_dir}/{tenant_id}/ticket_uploads/draft/{safe_name}
+    """
+    def get(self, request, *args, **kwargs):
+        safe_name = kwargs.get('safe_name', '')
+        tenant_id = request.META.get('HTTP_TENANTID')
+        if not safe_name or '..' in safe_name or '/' in safe_name or '\\' in safe_name:
+            return api_response(-1, "invalid path", '')
+
+        loonflow_data_dir = getattr(settings, 'LOONFLOW_DATA_DIR', None)
+        if not loonflow_data_dir:
+            return api_response(-1, "LOONFLOW_DATA_DIR not configured", '')
+        upload_dir = os.path.join(loonflow_data_dir, tenant_id, 'ticket_uploads')
+        file_path = os.path.join(upload_dir, 'draft', safe_name)
+
+        if not os.path.isfile(file_path):
+            raise Http404("File not found")
+
+        try:
+            response = FileResponse(open(file_path, 'rb'), as_attachment=True, filename=safe_name)
+            return response
+        except OSError:
+            logger.error(traceback.format_exc())
+            return api_response(-1, "failed to read file", '')
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.method.lower() in self.http_method_names:
+            handler = getattr(self, request.method.lower(), self.http_method_not_allowed)
+        else:
+            handler = self.http_method_not_allowed
+        return handler(request, *args, **kwargs)
+
+
+class TicketFileUploadView(BaseView):
+    """ 
+    Ticket file upload: save the file to {LOONFLOW_DATA_DIR}/{tenant_id}/ticket_uploads/{ticket_id}/ and return the access path
+    """
+    def post(self, request, *args, **kwargs):
+        ticket_id = kwargs.get('ticket_id')
+        app_name = request.META.get('HTTP_APPNAME')
+        tenant_id = request.META.get('HTTP_TENANTID')
+        operator_id = request.META.get('HTTP_USERID')
+        try:
+            account_base_service_ins.app_ticket_permission_check(tenant_id, app_name, ticket_id)
+        except CustomCommonException as e:
+            return api_response(-1, str(e), '')
+        except Exception:
+            logger.error(traceback.format_exc())
+            return api_response(-1, "Internal Server Error", '')
+
+        try:
+            user_view_permission = ticket_base_service_ins.ticket_view_permission_check(tenant_id, ticket_id, operator_id)
+        except CustomCommonException as e:
+            return api_response(-1, str(e), '')
+        if not user_view_permission:
+            return api_response(-1, "user has no view permission", '')
+
+        loonflow_data_dir = getattr(settings, 'LOONFLOW_DATA_DIR', None)
+        if not loonflow_data_dir:
+            return api_response(-1, "LOONFLOW_DATA_DIR not configured", '')
+        upload_dir = os.path.join(loonflow_data_dir, tenant_id, 'ticket_uploads')
+        dir_path = os.path.join(upload_dir, str(ticket_id))
+
+        if 'file' not in request.FILES:
+            return api_response(-1, "no file in request", '')
+
+        uploaded = request.FILES['file']
+        ext = os.path.splitext(uploaded.name)[1] or ''
+        if ext and not ext.startswith('.'):
+            ext = '.' + ext
+        safe_name = str(uuid.uuid4()) + ext
+        try:
+            os.makedirs(dir_path, exist_ok=True)
+        except OSError:
+            logger.error(traceback.format_exc())
+            return api_response(-1, "failed to create upload directory", '')
+
+        file_path = os.path.join(dir_path, safe_name)
+        try:
+            with open(file_path, 'wb') as f:
+                for chunk in uploaded.chunks():
+                    f.write(chunk)
+        except OSError:
+            logger.error(traceback.format_exc())
+            return api_response(-1, "failed to save file", '')
+
+        file_url = "/api/v1.0/tickets/{}/files/{}".format(ticket_id, safe_name)
+        return api_response(0, '', dict(url=file_url, name=uploaded.name, size=uploaded.size))
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.method.lower() in self.http_method_names:
+            handler = getattr(self, request.method.lower(), self.http_method_not_allowed)
+        else:
+            handler = self.http_method_not_allowed
+        return handler(request, *args, **kwargs)
+
+
+class TicketFileDownloadView(BaseView):
+    """
+    Ticket file download: check the ticket view permission and return the file content, the path is the same as TicketFileUploadView, the URL is the safe_name
+    """
+    def get(self, request, *args, **kwargs):
+        ticket_id = kwargs.get('ticket_id')
+        safe_name = kwargs.get('safe_name', '')
+        app_name = request.META.get('HTTP_APPNAME')
+        tenant_id = request.META.get('HTTP_TENANTID')
+        operator_id = request.META.get('HTTP_USERID')
+
+        if not safe_name or '..' in safe_name or '/' in safe_name or '\\' in safe_name:
+            return api_response(-1, "invalid safe_name", '')
+
+        try:
+            account_base_service_ins.app_ticket_permission_check(tenant_id, app_name, ticket_id)
+        except CustomCommonException as e:
+            return api_response(-1, str(e), '')
+        except Exception:
+            logger.error(traceback.format_exc())
+            return api_response(-1, "Internal Server Error", '')
+
+        try:
+            user_view_permission = ticket_base_service_ins.ticket_view_permission_check(tenant_id, ticket_id, operator_id)
+        except CustomCommonException as e:
+            return api_response(-1, str(e), '')
+        if not user_view_permission:
+            return api_response(-1, "user has no view permission", '')
+
+        loonflow_data_dir = getattr(settings, 'LOONFLOW_DATA_DIR', None)
+        if not loonflow_data_dir:
+            return api_response(-1, "LOONFLOW_DATA_DIR not configured", '')
+
+        upload_dir = os.path.join(loonflow_data_dir, tenant_id, 'ticket_uploads')
+        file_path = os.path.join(upload_dir, str(ticket_id), safe_name)
+        if not os.path.isfile(file_path):
+            raise Http404("File not found")
+
+        try:
+            response = FileResponse(open(file_path, 'rb'), as_attachment=True, filename=safe_name)
+            return response
+        except OSError:
+            logger.error(traceback.format_exc())
+            return api_response(-1, "failed to read file", '')
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.method.lower() in self.http_method_names:
+            handler = getattr(self, request.method.lower(), self.http_method_not_allowed)
+        else:
+            handler = self.http_method_not_allowed
+        return handler(request, *args, **kwargs)
+
 
 class TicketMockExternalAssigneeView(BaseView):
     def post(self, request, *args, **kwargs):

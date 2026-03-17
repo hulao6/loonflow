@@ -45,20 +45,9 @@ services:
       DJANGO_SUPERUSER_PASSWORD: ${ADMIN_PASSWORD}
       TENANT_NAME: ${TENANT_NAME}
       TENANT_DOMAIN: ${TENANT_DOMAIN}
-
-    working_dir: /app/loonflow
-    ports:
-      - 8000:8000
-    command:
-      - sh
-      - -c
-      - |
-        python manage.py makemigrations
-        python manage.py migrate
-        python manage.py createsuperuser --noinput --email ${ADMIN_EMAIL} --name ${ADMIN_NAME} || true
-        gunicorn --bind 0.0.0.0:8000 --workers 4 --chdir /app/loonflow --pythonpath /app/loonflow \
-        --access-logfile - --error-logfile - --log-level info \
-        loonflow.wsgi:application
+      LOONFLOW_DATA_DIR: app/loonflow_data
+      volumes:
+        - loonflow_data:/app/loonflow_data
 
   loonflow-task:
     hostname: loonflow-task
@@ -85,3 +74,5 @@ services:
 volumes:
   pg_data:
     name: ${PG_DATA_VOLUME}
+  loonflow_data:
+    name: ${LOONFLOW_DATA_VOLUME}

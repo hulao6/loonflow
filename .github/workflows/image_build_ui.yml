@@ -13,13 +13,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
       
+      # setup-node cache:yarn runs yarn before Corepack; use actions/cache instead for Yarn 4.
       - name: Setup Node.js 22
         uses: actions/setup-node@v6
         with:
           node-version: '22.x'
-          cache: 'yarn'
-          cache-dependency-path: frontend/yarn.lock
-          
+
       - name: Enable Corepack and setup Yarn
         run: |
           corepack enable

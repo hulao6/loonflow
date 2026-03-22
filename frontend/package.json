@@ -92,5 +92,15 @@
     "@types/draft-js": "^0",
     "@types/lodash": "^4.17.16",
     "eslint": "^8.57.0"
+  },
+  "resolutions": {
+    "lodash": "4.17.23",
+    "webpack": "5.105.0",
+    "axios": "1.13.5",
+    "jsonpath": "1.2.1",
+    "rollup": "2.80.0",
+    "minimatch": "3.1.5",
+    "tar": "7.5.11",
+    "flatted": "3.4.2"
   }
 }

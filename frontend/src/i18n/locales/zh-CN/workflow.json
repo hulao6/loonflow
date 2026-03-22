@@ -156,6 +156,7 @@
     "redo": "重做",
     "copy": "复制",
     "delete": "删除",
+    "autoLayout": "自动优化布局",
     "clearCanvas": "清空画布"
   },
   "propertyPanelLabel": {

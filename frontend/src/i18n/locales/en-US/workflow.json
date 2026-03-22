@@ -156,6 +156,7 @@
     "redo": "Redo",
     "copy": "Copy",
     "delete": "Delete",
+    "autoLayout": "Auto layout",
     "clearCanvas": "Clear Canvas"
   },
   "propertyPanelLabel": {

@@ -88,7 +88,7 @@ export interface IWorkflowComponent {
   componentPermission?: 'readonly' | 'optional' | 'required' | 'hidden',
   value?: any,
   description: string,
-  type: 'text' | 'textarea' | 'number' | 'select' | 'radio' | 'checkbox' | 'time' | 'date' | 'datetime' | 'user' | 'department' | 'file' | 'link' | 'richText' | 'externalData' | 'creator_info' | 'created_at' | 'act_state' | 'workflow_info' | 'current_assignee_infos' | 'title' | 'ticket_node_infos',
+  type: 'text' | 'textarea' | 'number' | 'select' | 'radio' | 'checkbox' | 'time' | 'date' | 'datetime' | 'user' | 'department' | 'file' | 'link' | 'richtext' | 'richText' | 'externalData' | 'creator_info' | 'created_at' | 'act_state' | 'workflow_info' | 'current_assignee_infos' | 'title' | 'ticket_node_infos',
   layout: ILayout,
   label: ILabel,
   props: IProps,

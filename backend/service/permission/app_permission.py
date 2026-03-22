@@ -1,5 +1,8 @@
+from ast import pattern
 import json
+from django.db.models.constraints import F
 import jwt
+import re
 import traceback
 from celery.worker.consumer.mingle import exception
 from django.conf import settings
@@ -19,7 +22,7 @@ class AppPermissionCheck(MiddlewareMixin):
     """
     app call permission check middleware
     """
-    def process_request(self, request):
+    def process_request(self, request, *args, **kwargs):
         if request.path == '/api/v1.0/login':
             # for jwt login
             return
@@ -61,6 +64,15 @@ class AppPermissionCheck(MiddlewareMixin):
         :param request:
         :return:
         """
+        if request.method.lower() == 'get':
+            pattern = r'/api/v1\.0/tickets/([^/]+)/([^/]+)/files/([^/]+\.\w+)$'
+            if re.match(pattern, request.path):
+                if request.GET.get('token'):
+                    request.META.update(dict(HTTP_TENANTID=""))
+                    request.META.update(dict(HTTP_APPNAME=""))
+                    request.META.update(dict(HTTP_EMAIL=""))
+                    request.META.update(dict(HTTP_USERID=""))
+                    return
         signature = request.META.get('HTTP_SIGNATURE')
         timestamp = request.META.get('HTTP_TIMESTAMP')
         app_name = request.META.get('HTTP_APPNAME')

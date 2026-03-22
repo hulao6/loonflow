@@ -6,6 +6,7 @@ from django.db.models import BooleanField
 from service.base_service import BaseService
 from service.common.log_service import auto_log
 from service.exception.custom_common_exception import CustomCommonException
+from django.conf import settings
 
 
 class CommonService(BaseService):
@@ -58,6 +59,43 @@ class CommonService(BaseService):
         ori_str = timestamp + md5_key
         signature = hashlib.md5(ori_str.encode(encoding='utf-8')).hexdigest()
         return signature, timestamp
+    
+    @classmethod
+    @auto_log
+    def gen_file_temp_token(cls, file_uri: str, timestamp: str='')->tuple:
+        """
+        gen file temp token
+        :param file_url: eg. /api/v1.0/tickets/00000000-0000-0000-0000-000000000001/00000022-1100-0000-0000-000000000001/files/c162f086-51a3-4300-b175-8776f4275919.png, /api/v1.0/tickets/00000000-0000-0000-0000-000000000001/draft/files/c162f086-51a3-4300-b175-8776f4275919.png
+        :return:
+        """
+        ENCRYPTION_KEY = settings.ENCRYPTION_KEY
+        if not timestamp:
+            timestamp = str(int(time.time()))
+        file_uri_list = file_uri.split('/')
+        tenant_id =  file_uri_list[4]
+        ticket_id =  file_uri_list[5] # ticket_id or draft_id
+        file_name =  file_uri_list[7].split('?')[0]
+        ori_str = timestamp + tenant_id + ticket_id + file_name + ENCRYPTION_KEY
+        token = hashlib.md5(ori_str.encode(encoding='utf-8')).hexdigest()
+        return timestamp, token
+        
+    @classmethod
+    @auto_log
+    def check_file_temp_token(cls, token: str, timestamp: str, file_uri: str)->tuple:
+        """
+        check file temp token
+        :param signature:
+        :param timestamp:
+        :param file_uri:
+        :return:
+        """
+        current_time = int(time.time())
+        if abs(current_time - int(timestamp)) > 120:
+            return False, 'token expired'
+        timestamp, correct_token = cls.gen_file_temp_token(file_uri, timestamp)
+        if correct_token != token:
+            return False, 'token invalid'
+        return True, ''
 
     @classmethod
     @auto_log

@@ -61,3 +61,4 @@ clock_flag.txt
 !.yarn/sdks
 !.yarn/versions
 .pnp.*
+.cursor/*

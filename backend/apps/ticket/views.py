@@ -13,6 +13,7 @@ from service.account.account_base_service import account_base_service_ins
 from service.exception.custom_common_exception import CustomCommonException
 from service.ticket.ticket_base_service import ticket_base_service_ins
 from service.ticket.ticket_node_service import ticket_node_service_ins
+from service.common.common_service import common_service_ins
 
 logger = logging.getLogger("django")
 
@@ -289,7 +290,6 @@ class TicketDraftFileUploadView(BaseView):
     Draft file upload for new ticket: save to {upload_dir}/{tenant_id}/draft/{upload_id}/, return draft URL; migrate to ticket directory when creating ticket
     """
     def post(self, request, *args, **kwargs):
-        app_name = request.META.get('HTTP_APPNAME')
         tenant_id = request.META.get('HTTP_TENANTID')
         if not tenant_id:
             return api_response(-1, "tenant required", '')
@@ -323,7 +323,9 @@ class TicketDraftFileUploadView(BaseView):
             logger.error(traceback.format_exc())
             return api_response(-1, "failed to save file", '')
 
-        draft_url = f"/api/v1.0/tickets/draft/files/{safe_name}"
+        draft_url = f"/api/v1.0/tickets/{tenant_id}/draft/files/{safe_name}"
+        timestamp, token = common_service_ins.gen_file_temp_token(draft_url)
+        draft_url = f"{draft_url}?token={token}&timestamp={timestamp}"
         return api_response(0, '', dict(url=draft_url, name=uploaded.name, size=uploaded.size))
 
     def dispatch(self, request, *args, **kwargs):
@@ -337,10 +339,24 @@ class TicketDraftFileUploadView(BaseView):
 class TicketDraftFileDownloadView(BaseView):
     """
     Draft file download for new ticket: download the file from {upload_dir}/{tenant_id}/ticket_uploads/draft/{safe_name}
+    only support temp token validataion
     """
     def get(self, request, *args, **kwargs):
+        token = request.GET.get('token', '')
+        timestamp = request.GET.get('timestamp', '')
+        if not (token and timestamp):
+            return api_response(-1, "token and timestamp are required", '')
+        
+        # check token valudation
+        tenant_id = kwargs.get('tenant_id', '')
         safe_name = kwargs.get('safe_name', '')
-        tenant_id = request.META.get('HTTP_TENANTID')
+        file_uri = f"/api/v1.0/tickets/{tenant_id}/draft/files/{safe_name}?token={token}&timestamp={timestamp}"
+        flag, msg = common_service_ins.check_file_temp_token(token, timestamp, file_uri)
+        if not flag:
+            return api_response(-1, msg, '')
+        safe_name = kwargs.get('safe_name', '')
+        tenant_id = kwargs.get('tenant_id', '')
+
         if not safe_name or '..' in safe_name or '/' in safe_name or '\\' in safe_name:
             return api_response(-1, "invalid path", '')
 
@@ -421,7 +437,9 @@ class TicketFileUploadView(BaseView):
             logger.error(traceback.format_exc())
             return api_response(-1, "failed to save file", '')
 
-        file_url = "/api/v1.0/tickets/{}/files/{}".format(ticket_id, safe_name)
+        file_url = f"/api/v1.0/tickets/{tenant_id}/{ticket_id}/files/{safe_name}"
+        timestamp, token = common_service_ins.gen_file_temp_token(file_url)
+        file_url = f"{file_url}?token={token}&timestamp={timestamp}"
         return api_response(0, '', dict(url=file_url, name=uploaded.name, size=uploaded.size))
 
     def dispatch(self, request, *args, **kwargs):
@@ -439,27 +457,36 @@ class TicketFileDownloadView(BaseView):
     def get(self, request, *args, **kwargs):
         ticket_id = kwargs.get('ticket_id')
         safe_name = kwargs.get('safe_name', '')
-        app_name = request.META.get('HTTP_APPNAME')
-        tenant_id = request.META.get('HTTP_TENANTID')
+        tenant_id = kwargs.get('tenant_id', '')
         operator_id = request.META.get('HTTP_USERID')
+        token = request.GET.get('token', '')
+        timestamp = request.GET.get('timestamp', '')
 
         if not safe_name or '..' in safe_name or '/' in safe_name or '\\' in safe_name:
             return api_response(-1, "invalid safe_name", '')
 
-        try:
-            account_base_service_ins.app_ticket_permission_check(tenant_id, app_name, ticket_id)
-        except CustomCommonException as e:
-            return api_response(-1, str(e), '')
-        except Exception:
-            logger.error(traceback.format_exc())
-            return api_response(-1, "Internal Server Error", '')
+        
+        if token:
+            # token permission check
+            file_uri = f"/api/v1.0/tickets/{tenant_id}/{ticket_id}/files/{safe_name}"
+            flag, msg = common_service_ins.check_file_temp_token(token, timestamp, file_uri)
+            if not flag:
+                return api_response(-1, msg, '')
+        else:
+            try:
+                account_base_service_ins.app_ticket_permission_check(tenant_id, 'loonflow', ticket_id)
+            except CustomCommonException as e:
+                return api_response(-1, str(e), '')
+            except Exception:
+                logger.error(traceback.format_exc())
+                return api_response(-1, "Internal Server Error", '')
 
-        try:
-            user_view_permission = ticket_base_service_ins.ticket_view_permission_check(tenant_id, ticket_id, operator_id)
-        except CustomCommonException as e:
-            return api_response(-1, str(e), '')
-        if not user_view_permission:
-            return api_response(-1, "user has no view permission", '')
+            try:
+                user_view_permission = ticket_base_service_ins.ticket_view_permission_check(tenant_id, ticket_id, operator_id)
+            except CustomCommonException as e:
+                return api_response(-1, str(e), '')
+            if not user_view_permission:
+                return api_response(-1, "user has no view permission", '')
 
         loonflow_data_dir = getattr(settings, 'LOONFLOW_DATA_DIR', None)
         if not loonflow_data_dir:

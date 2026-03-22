@@ -201,7 +201,7 @@ function ComponentProperties({ component, onUpdate, formSchema }: ComponentPrope
                 </>
             ) : null}
 
-            {(component.type === 'text' || component.type === 'textarea') && (
+            {(['text', 'textarea', 'richtext'].includes(component.type as string)) && (
                 <TextField
                     label={t('workflow.componentProperties.placeholder')}
                     value={(component as IWorkflowComponent).props.placeholder || ''}

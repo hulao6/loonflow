@@ -1,4 +1,5 @@
 import json
+import re
 from apps.ticket.models import CustomField as TicketCustomField
 from service.ticket.ticket_user_service import ticket_user_service_ins
 from service.account.account_base_service import account_base_service_ins
@@ -7,6 +8,13 @@ from service.workflow.workflow_base_service import workflow_base_service_ins
 from service.base_service import BaseService
 from service.workflow.workflow_component_service import workflow_component_service_ins
 from apps.ticket.models import Record as TicketRecord
+from service.common.common_service import common_service_ins
+
+# Match src="/api/..." or href='/api/...' in rich text HTML for ticket upload URLs.
+_TICKET_UPLOAD_HTML_ATTR_RE = re.compile(
+    r'(?P<attr>\b(?:src|href)\s*=\s*)(?P<q>["\'])(?P<path>/api/v1\.0/tickets/[^"\']+)(?P=q)',
+    re.IGNORECASE,
+)
 
 
 class TicketFieldService(BaseService):
@@ -30,9 +38,39 @@ class TicketFieldService(BaseService):
             return "datetime_value"
         elif field_type == "time":
             return "time_value"
-        elif field_type in ["rich_text", "textarea", "file"]:
+        elif field_type in ["richtext", "textarea", "file"]:
             return "rich_text_value"
-    
+
+    @classmethod
+    def _is_ticket_upload_api_path(cls, path: str) -> bool:
+        """Paths accepted by gen_file_temp_token: .../tickets/{tenant}/{draft|ticket_id}/files/{name}."""
+        p = path.split('?')[0].strip()
+        return bool(re.match(
+            r'^/api/v1\.0/tickets/[^/]+/[^/]+/files/[^/]+$',
+            p,
+        ))
+
+    @classmethod
+    def _append_temp_tokens_to_rich_text(cls, html: str) -> str:
+        if not html or not isinstance(html, str):
+            return html
+
+        def repl(match: re.Match) -> str:
+            attr = match.group('attr')
+            q = match.group('q')
+            raw_path = match.group('path')
+            base_path = raw_path.split('?')[0].strip()
+            if not cls._is_ticket_upload_api_path(base_path):
+                return match.group(0)
+            try:
+                timestamp, token = common_service_ins.gen_file_temp_token(base_path)
+            except (IndexError, ValueError, TypeError):
+                return match.group(0)
+            new_url = f'{base_path}?token={token}&timestamp={timestamp}'
+            return f'{attr}{q}{new_url}{q}'
+
+        return _TICKET_UPLOAD_HTML_ATTR_RE.sub(repl, html)
+
     @classmethod
     def get_ticket_all_field_value(cls, tenant_id: str, ticket_id: str) -> dict:
         """
@@ -47,7 +85,16 @@ class TicketFieldService(BaseService):
             if ticket_custom_field.field_type in ("text", "select", "cascade", "user", "department"):
                 result_dict[ticket_custom_field.field_key] = ticket_custom_field.common_value
             elif ticket_custom_field.field_type == "file":
-                result_dict[ticket_custom_field.field_key] = ticket_custom_field.rich_text_value
+                source_vaule = ticket_custom_field.rich_text_value
+                source_value_list = json.loads(source_vaule)
+                new_value_list = []
+                for item in source_value_list:
+                    file_path = item.get('file_path') or ''
+                    timestamp, token = common_service_ins.gen_file_temp_token(file_path.split('?')[0])
+                    file_path = file_path.split('?')[0] + f"?token={token}&timestamp={timestamp}"
+                    new_value_list.append(dict(item, file_path=file_path))
+                new_value = json.dumps(new_value_list, ensure_ascii=False)
+                result_dict[ticket_custom_field.field_key] = new_value
             elif ticket_custom_field.field_type == "number":
                 result_dict[ticket_custom_field.field_key] = ticket_custom_field.number_value
             elif ticket_custom_field.field_type == "date":
@@ -56,8 +103,11 @@ class TicketFieldService(BaseService):
                 result_dict[ticket_custom_field.field_key] = ticket_custom_field.datetime_value
             elif ticket_custom_field.field_type == "time":
                 result_dict[ticket_custom_field.field_key] = ticket_custom_field.time_value
-            elif ticket_custom_field.field_type in ["rich_text", "textarea"]:
-                result_dict[ticket_custom_field.field_key] = ticket_custom_field.rich_text_value
+            elif ticket_custom_field.field_type in ["rich_text", "richtext", "textarea"]:
+                source_value = ticket_custom_field.rich_text_value
+                result_dict[ticket_custom_field.field_key] = cls._append_temp_tokens_to_rich_text(
+                    source_value,
+                )
             else:
                 result_dict[ticket_custom_field.field_key] = ticket_custom_field.common_value
         basic_info_dict = cls.get_ticket_basic_field_value(tenant_id, ticket_id)
@@ -154,7 +204,7 @@ class TicketFieldService(BaseService):
             result_dict[ticket_custom_field_obj.field_key] = ticket_custom_field_obj.number_value
         elif ticket_custom_field_obj.field_type == "date":
             result_dict[ticket_custom_field_obj.field_key] = ticket_custom_field_obj.date_value
-        elif ticket_custom_field_obj.field_type == "rich_text":
+        elif ticket_custom_field_obj.field_type in ["rich_text", "richtext"]:
             result_dict[ticket_custom_field_obj.field_key] = ticket_custom_field_obj.rich_text_value
         else:
             result_dict[ticket_custom_field_obj.field_key] = ticket_custom_field_obj.common_value
@@ -192,6 +242,13 @@ class TicketFieldService(BaseService):
             raw_value = field_info_dict.get(field_key)
             field_type = field_key_type_dict.get(field_key)
             if field_type == 'file' and isinstance(raw_value, list):
+                # remove token and timestamp from file_path
+                new_value = []
+                for item in raw_value:
+                    file_path = item.get('file_path') or ''
+                    file_path = file_path.split('?')[0]
+                    new_value.append(dict(item, file_path=file_path))
+                raw_value = new_value
                 store_value = json.dumps(raw_value, ensure_ascii=False)
             elif type(raw_value) == list:
                 store_value = ','.join(str(x) for x in raw_value)

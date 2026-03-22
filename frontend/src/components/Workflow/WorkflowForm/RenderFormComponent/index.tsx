@@ -9,6 +9,7 @@ import {
     FileField,
     NumberField,
     RadioField,
+    RichTextField,
     SelectField,
     TextAreaField,
     TextField,
@@ -79,7 +80,7 @@ function RenderFormComponent({ component, handleComponentUpdate, ticketId }: Ren
         return <div>{t('common.invalidComponent')}</div>;
     }
 
-    // 根据组件类型渲染不同的表单字段
+
     switch (component.type) {
         case 'text':
             return (
@@ -167,6 +168,16 @@ function RenderFormComponent({ component, handleComponentUpdate, ticketId }: Ren
                 <FileField
                     value={value}
                     fieldRequired={component.componentPermission === 'required'}
+                    onChange={handleFieldChange}
+                    mode={component.componentPermission === 'readonly' ? 'view' : 'edit'}
+                    props={component.props}
+                    ticketId={ticketId}
+                />
+            );
+        case 'richtext':
+            return (
+                <RichTextField
+                    value={value}
                     onChange={handleFieldChange}
                     mode={component.componentPermission === 'readonly' ? 'view' : 'edit'}
                     props={component.props}

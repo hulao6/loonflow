@@ -1,3 +1,4 @@
+import re
 import copy
 import json
 import datetime
@@ -38,8 +39,19 @@ from service.workflow.workflow_component_service import workflow_component_servi
 DRAFT_FILE_URL_PREFIX = "/api/v1.0/tickets/draft/files/"
 
 
-def _migrate_draft_files_in_fields(tenant_id, ticket_id, fields_dict, upload_dir):
-    """migrate draft files in fields to ticket directory"""
+def _migrate_draft_files_in_fields(ticket_id, fields_dict, upload_dir):
+    """
+    migrate draft files in fields to ticket directory
+    draft_url: /api/v1.0/tickets/{tenant_id}/draft/files/{file_name}?token=xx?timestamp=xxx
+    :param tenant_id:
+    :param ticket_id:
+    :param fields_dict:
+    :param upload_dir:
+    :return:
+    
+    """
+    pattern = r'/api/v1\.0/tickets/([^/]+)/draft/files/([^/]+\.\w+)$'
+
     if not fields_dict or not upload_dir:
         return fields_dict
     result = copy.deepcopy(fields_dict)
@@ -53,12 +65,13 @@ def _migrate_draft_files_in_fields(tenant_id, ticket_id, fields_dict, upload_dir
                 if not isinstance(item, dict) or 'file_path' not in item:
                     new_list.append(item)
                     continue
-                fp = item.get('file_path') or ''
-                if not fp.startswith(DRAFT_FILE_URL_PREFIX):
+                file_path = item.get('file_path') or ''
+                fp = file_path.split('?')[0]
+                if not re.match(pattern, fp):
                     new_list.append(item)
                     continue
-                # /api/v1.0/tickets/draft/files/{safe_name}
-                safe_name = fp[len(DRAFT_FILE_URL_PREFIX):].strip('/').split('/')[-1]
+                
+                safe_name = re.match(pattern, fp).group(2)
                 if not safe_name:
                     new_list.append(item)
                     continue
@@ -77,6 +90,7 @@ def _migrate_draft_files_in_fields(tenant_id, ticket_id, fields_dict, upload_dir
                 except (OSError, shutil.Error):
                     continue
                 new_url = "/api/v1.0/tickets/{}/files/{}".format(ticket_id, safe_name)
+                new_url = fp.replace('/draft/', f'/{ticket_id}/')
                 new_list.append(dict(item, file_path=new_url))
             result[field_key] = json.dumps(new_list) if isinstance(field_value, str) else new_list
         except (json.JSONDecodeError, TypeError, ValueError):
@@ -314,12 +328,12 @@ class TicketBaseService(BaseService):
         ticket_record.save()
         ticket_id = ticket_record.id
 
-        # 新建工单时：将 fields 中的草稿附件 URL 迁移到工单目录并替换为正式 URL
+        # draft files to ticket files
         loonflow_data_dir = getattr(settings, 'LOONFLOW_DATA_DIR', None)
         if loonflow_data_dir and request_data_dict.get('fields'):
             upload_dir = os.path.join(loonflow_data_dir, str(tenant_id), 'ticket_uploads')
             request_data_dict['fields'] = _migrate_draft_files_in_fields(
-                tenant_id, ticket_id, request_data_dict['fields'], upload_dir
+                ticket_id, request_data_dict['fields'], upload_dir
             )
 
         # add ticket cc_to user record
@@ -777,7 +791,7 @@ class TicketBaseService(BaseService):
                 else: 
                     component_result_list = workflow_base_service_ins.get_workflow_node_form(tenant_id, workflow_id, workflow_version_id, assignee_node_ids.split(',')[0])
 
-        # todo: set field value
+        # set field value
         new_component_result_list = []
         for component in component_result_list:
             # new_component = copy.deepcopy(component)

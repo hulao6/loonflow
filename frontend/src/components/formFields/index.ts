@@ -8,6 +8,7 @@ import TimeField from './TimeField';
 import DateField from './DateField';
 import DateTimeField from './DateTimeField';
 import FileField from './FileField';
+import RichTextField from './RichTextField';
 import UserField from './UserField';
 import DepartmentField from './DepartmentField';
 import TicketCreatorField from './TicketCreatorField';
@@ -28,6 +29,7 @@ export { default as TimeField } from './TimeField';
 export { default as DateField } from './DateField';
 export { default as DateTimeField } from './DateTimeField';
 export { default as FileField } from './FileField';
+export { default as RichTextField } from './RichTextField';
 export { default as UserField } from './UserField';
 export { default as DepartmentField } from './DepartmentField';
 export { default as TicketCreatorField } from './TicketCreatorField';
@@ -52,6 +54,8 @@ export const fieldComponentMap = {
     date: DateField,
     datetime: DateTimeField,
     file: FileField,
+    richtext: RichTextField,
+    richText: RichTextField,
     user: UserField,
     department: DepartmentField,
     creator: TicketCreatorField,

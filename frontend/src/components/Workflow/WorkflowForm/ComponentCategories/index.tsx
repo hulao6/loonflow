@@ -44,6 +44,17 @@ const getBasicComponentTemplates = (t: any): ComponentTemplate[] => [
         }
     },
     {
+        type: 'richtext' as ComponentTemplate['type'],
+        componentName: t('workflow.componentCategories.richTextComponent'),
+        icon: <TextFieldsIcon />,
+        defaultProps: {
+            description: '',
+            fieldKey: '',
+            placeholder: '',
+            layout: { span: 12 }
+        }
+    },
+    {
         type: 'number',
         componentName: t('workflow.componentCategories.numberComponent'),
         icon: <NumberIcon />,

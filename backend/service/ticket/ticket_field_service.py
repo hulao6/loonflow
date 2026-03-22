@@ -19,6 +19,10 @@ from service.base_service import BaseService
 from service.workflow.workflow_component_service import workflow_component_service_ins
 from apps.ticket.models import Record as TicketRecord
 from service.common.common_service import common_service_ins
+from service.common.datetime_timezone_util import (
+    coerce_custom_field_date_value,
+    coerce_custom_field_datetime_value,
+)
 
 logger = logging.getLogger('django')
 
@@ -52,7 +56,6 @@ class TicketFieldService(BaseService):
             return "time_value"
         elif field_type in ["richtext", "textarea", "file"]:
             return "rich_text_value"
-
 
     @classmethod
     def json_safe_ticket_fields(cls, payload: dict) -> dict:
@@ -456,6 +459,10 @@ class TicketFieldService(BaseService):
                 store_value = ','.join(str(x) for x in raw_value)
             else:
                 store_value = raw_value
+            if field_type == 'date':
+                store_value = coerce_custom_field_date_value(store_value)
+            elif field_type == 'datetime':
+                store_value = coerce_custom_field_datetime_value(store_value)
             if field_key in exist_field_key_list:
                 need_update_field_value_list.append({field_key: store_value})
             else:

@@ -1,11 +1,11 @@
 from calendar import c
-import datetime
 import json
 from math import e
 import time
 import copy
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.db.models import Q
+from django.utils import timezone
 from apps.workflow.models import Component
 from service.account.account_user_service import account_user_service_ins
 from service.account.account_dept_service import account_dept_service_ins
@@ -243,7 +243,7 @@ class WorkflowComponentService(BaseService):
             custom_fields = cls.get_workflow_custom_fields(tenant_id, workflow_id, version_id)
             for custom_field in custom_fields:
                 source_fields[custom_field['component_key']] = ''
-            source_fields['created_at'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            source_fields['created_at'] = timezone.localtime(timezone.now()).strftime('%Y-%m-%d %H:%M:%S')
             # update info field
             creator_record = account_user_service_ins.get_user_by_user_id(tenant_id, operator_id)
             source_fields['creator'] = '{}({})'.format(creator_record.name, creator_record.alias)

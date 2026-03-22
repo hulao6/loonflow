@@ -79,13 +79,15 @@ class TicketListView(BaseView):
         # app_name
         app_name = request.META.get('HTTP_APPNAME')
 
-        # 未指定创建起止时间则取最近三年的记录
+        # Default list window: last three years (use aware local time for consistent filtering with USE_TZ)
         if not(create_start or create_end):
-            import datetime
-            end_time = datetime.datetime.now() + datetime.timedelta(hours=1)
-            last_year_time = datetime.datetime.now() - datetime.timedelta(days=365*3)
-            create_start = str(last_year_time)[:19]
-            create_end = str(end_time)[:19]
+            from datetime import timedelta
+            from django.utils import timezone
+            now_local = timezone.localtime(timezone.now())
+            end_time = now_local + timedelta(hours=1)
+            last_year_time = now_local - timedelta(days=365 * 3)
+            create_start = last_year_time.strftime('%Y-%m-%d %H:%M:%S')
+            create_end = end_time.strftime('%Y-%m-%d %H:%M:%S')
         try:
             result = ticket_base_service_ins.get_ticket_list(
                 tenant_id, search_value, user_id, creator_id, create_start, create_end,

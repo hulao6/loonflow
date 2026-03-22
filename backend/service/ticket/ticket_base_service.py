@@ -35,6 +35,7 @@ from service.workflow.workflow_node_service import workflow_node_service_ins
 from service.workflow.workflow_edge_service import workflow_edge_service_ins
 from service.workflow.workflow_permission_service import workflow_permission_service_ins
 from service.workflow.workflow_component_service import workflow_component_service_ins
+from service.common.datetime_timezone_util import parse_datetime_filter_param
 
 DRAFT_FILE_URL_PREFIX = "/api/v1.0/tickets/draft/files/"
 
@@ -160,9 +161,9 @@ class TicketBaseService(BaseService):
         if search_value:
             query_params &= Q(title__contains=search_value)
         if create_start:
-            query_params &= Q(created_at__gte=create_start)
+            query_params &= Q(created_at__gte=parse_datetime_filter_param(create_start))
         if create_end:
-            query_params &= Q(created_at__lte=create_end)
+            query_params &= Q(created_at__lte=parse_datetime_filter_param(create_end))
         if workflow_ids:
             workflow_id_str_list = workflow_ids.split(',')
             query_workflow_id_list = [workflow_id_str for workflow_id_str in workflow_id_str_list]

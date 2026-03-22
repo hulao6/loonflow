@@ -23,17 +23,17 @@ services:
 
   loonflow-ui:
     hostname: loonflow-ui
-    image: blackholll/loonflow-ui:r3.0.1
+    image: blackholll/loonflow-ui:v3.1.0
     container_name: loonflow-ui
     depends_on:
       - loonflow-redis
       - loonflow-pg
     ports:
-      - 80:80
+      - 8001:80
 
   loonflow-backend:
     hostname: loonflow-backend
-    image: blackholll/loonflow-backend:r3.0.1
+    image: blackholll/loonflow-backend:v3.1.0
     container_name: loonflow-backend
     environment:
       DB_NAME: ${POSTGRES_DB}
@@ -46,12 +46,25 @@ services:
       TENANT_NAME: ${TENANT_NAME}
       TENANT_DOMAIN: ${TENANT_DOMAIN}
       LOONFLOW_DATA_DIR: app/loonflow_data
-      volumes:
-        - loonflow_data:/app/loonflow_data
+    volumes:
+      - loonflow_data:/app/loonflow_data
+    working_dir: /app/loonflow
+    ports:
+      - 8000:8000
+    command:
+      - sh
+      - -c
+      - |
+        python manage.py makemigrations
+        python manage.py migrate
+        python manage.py createsuperuser --noinput --email ${ADMIN_EMAIL} --name ${ADMIN_NAME} || true
+        gunicorn --bind 0.0.0.0:8000 --workers 4 --chdir /app/loonflow --pythonpath /app/loonflow \
+        --access-logfile - --error-logfile - --log-level info \
+        loonflow.wsgi:application
 
   loonflow-task:
     hostname: loonflow-task
-    image: blackholll/loonflow-backend:r3.0.1
+    image: blackholll/loonflow-backend:v3.1.0
     container_name: loonflow-task
     depends_on:
       - loonflow-redis

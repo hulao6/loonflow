@@ -83,8 +83,8 @@
     "externalDataReadonlyNote": "该字段始终只读，查看工单时由数据源接口返回展示内容。",
     "dataSourceUrlRequired": "请填写数据源地址",
     "dataSourceTokenRequired": "请填写 Token",
-    "showExternalDataSample": "显示签名示例",
-    "hideExternalDataSample": "隐藏签名示例"
+    "showExternalDataSample": "显示外部数据示例",
+    "hideExternalDataSample": "隐藏外部数据示例"
   },
   "componentCategories": {
     "basicComponent": "基础组件",

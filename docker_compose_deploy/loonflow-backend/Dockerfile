@@ -26,7 +26,7 @@ COPY --from=builder /root/.local /root/.local
 
 COPY ./backend /app/loonflow
 
-RUN cp settings/pro.py.sample settings/config.py && \
+RUN cp settings/config.py.sample settings/config.py && \
     sed -i "/HOMEPATH = os.environ/c\    HOMEPATH = '/var/log/loonflow'" /app/loonflow/settings/common.py
 
 RUN mkdir -p /var/log/loonflow

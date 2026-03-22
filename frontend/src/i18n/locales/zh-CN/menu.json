@@ -15,6 +15,6 @@
   "tenant": "租户管理",
   "application": "应用管理",
   "notification": "通知管理",
-  "oauth": "OAuth登录配置",
+  "authentication": "认证配置",
   "signin": "登录"
 }

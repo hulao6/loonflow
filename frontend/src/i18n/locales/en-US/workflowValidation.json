@@ -19,6 +19,7 @@
     "sourceNodeCannotBeEnd": "Exclusive gateway \"{{nodeName}}\" source node \"{{sourceNodeName}}\" cannot be an end node type"
   },
   "fieldPermission": {
+    "externalDataReadOnlyOrHidden": "On node \"{{nodeName}}\", external data field \"{{fieldName}}\" can only be read-only or hidden",
     "infoComponentReadOnly": "Info component \"{{key}}\" can only be set to hidden or read-only",
     "startNodeNeedInputField": "Start node \"{{nodeName}}\" field permissions must have at least one input field",
     "autoTitleMustHidden": "When auto-generating title, start node \"{{nodeName}}\" must set title field to hidden",
@@ -27,7 +28,9 @@
   "form": {
     "formDesignEmpty": "Form design cannot be empty",
     "rowComponentNoChildren": "Row component cannot have no child components",
-    "titleComponentCountError": "Form must have exactly one title component (type=\"title\"), currently has {{count}} title components"
+    "titleComponentCountError": "Form must have exactly one title component (type=\"title\"), currently has {{count}} title components",
+    "externalDataUrlRequired": "External data field \"{{fieldName}}\" must have a data source URL",
+    "externalDataTokenRequired": "External data field \"{{fieldName}}\" must have a token"
   },
   "hook": {
     "hookUrlRequired": "Hook node \"{{nodeName}}\" must fill in hook URL",

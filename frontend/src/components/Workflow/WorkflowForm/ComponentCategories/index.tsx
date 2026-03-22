@@ -6,8 +6,9 @@ import {
     CheckBox as CheckBoxIcon,
     Person as CreatorIcon,
     AcUnit as DefaultIcon,
-    Groups as GroupsIcon,
+    CloudOutlined as ExternalDataIcon,
     InsertDriveFile as FileIcon,
+    Groups as GroupsIcon,
     Pin as NumberIcon,
     RadioButtonChecked as RadioButtonIcon,
     Schedule,
@@ -202,18 +203,22 @@ const getBasicComponentTemplates = (t: any): ComponentTemplate[] => [
                 multiple: false
             }
         }
+    },
+    {
+        type: 'externaldata',
+        componentName: t('workflow.componentCategories.externalDataComponent'),
+        icon: <ExternalDataIcon />,
+        defaultProps: {
+            description: '',
+            fieldKey: '',
+            layout: { span: 12 },
+            props: {
+                dataSourceUrl: '',
+                dataSourceToken: '',
+                displayStyle: 'text' as const
+            }
+        }
     }
-    // {
-    //     type: 'externalData',
-    //     componentName: t('workflow.componentCategories.externalDataComponent'),
-    //     icon: <DateIcon />,
-    //     defaultProps: {
-    //         // label: '外部数据源',
-    //         description: '',
-    //         fieldKey: '',
-    //         layout: { span: 6 }
-    //     }
-    // }
 ];
 
 const getInfoComponentTemplates = (t: any): ComponentTemplate[] => [

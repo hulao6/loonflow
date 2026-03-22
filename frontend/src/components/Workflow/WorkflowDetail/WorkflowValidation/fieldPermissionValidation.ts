@@ -1,6 +1,13 @@
 import { IWorkflowFullDefinition } from '../../../../types/workflow';
 import { getValidationMessage } from './i18n';
 
+function toCamelCase(input: string): string {
+    if (!input) return input;
+    return input
+        .replace(/[-_ ]+([a-zA-Z0-9])/g, (_, c: string) => c.toUpperCase())
+        .replace(/^[A-Z]/, (c: string) => c.toLowerCase());
+}
+
 /**
  * Validate field permissions for start and normal nodes
  * @param workflowData Complete workflow definition data
@@ -20,11 +27,28 @@ export const validateFieldPermissions = (workflowData: IWorkflowFullDefinition):
     const isTitleAuto = Boolean(titleComponent?.props?.titleGenerateMode === 'automatic');
     const titleKey = titleComponent?.componentKey;
 
+    const externalDataFieldLabelByPermissionKey = new Map<string, string>();
+    for (const c of allComponents) {
+        if (c.type !== 'externaldata') continue;
+        const permKey = toCamelCase(c.componentKey || '');
+        const label = String((c.componentName || c.componentKey || '').trim() || permKey);
+        externalDataFieldLabelByPermissionKey.set(permKey, label);
+    }
+
     for (const node of workflowData.processSchema.nodeInfoList) {
         const read_fields = ['creatorInfo', 'createdAt', 'ticketNodeInfos', 'actState', 'approvalStatus', 'workflowInfo', 'currentAssigneeInfos'];
         const fieldPermissions = node.props.fieldPermissions || {};
         // 遍历fieldPermissions的key
         for (const key of Object.keys(fieldPermissions)) {
+            if (externalDataFieldLabelByPermissionKey.has(key)) {
+                const perm = fieldPermissions[key];
+                if (perm === 'optional' || perm === 'required') {
+                    problems.push(getValidationMessage('fieldPermission', 'externalDataReadOnlyOrHidden', {
+                        nodeName: node.name,
+                        fieldName: externalDataFieldLabelByPermissionKey.get(key) || key
+                    }));
+                }
+            }
             if (read_fields.includes(key)) {
                 if (fieldPermissions[key] === 'optional' || fieldPermissions[key] === 'required') {
                     problems.push(getValidationMessage('fieldPermission', 'infoComponentReadOnly', {

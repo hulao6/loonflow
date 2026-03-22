@@ -102,6 +102,24 @@ function CustomizeConfig({ onCustomizeConfigChange, customizeConfig }: Customize
     ]
 
 
+    const ticketDetailTitleTemplate =
+        (typeof customizationInfo.label?.ticketDetailTitleTemplate === 'string'
+            ? customizationInfo.label.ticketDetailTitleTemplate
+            : typeof (customizationInfo.label as Record<string, unknown>)?.ticket_detail_title_template === 'string'
+                ? String((customizationInfo.label as Record<string, unknown>).ticket_detail_title_template)
+                : '') || '';
+
+    const handleTicketDetailTitleTemplateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const v = e.target.value;
+        const newLabel = { ...(customizationInfo.label || {}), ticketDetailTitleTemplate: v };
+        const newCustomizationInfo = { ...customizationInfo, label: newLabel };
+        setCustomizationInfo(newCustomizationInfo);
+        onCustomizeConfigChange(newCustomizationInfo);
+        setLabel(newLabel);
+        setLabelJson(JSON.stringify(newLabel, null, 2));
+        setError('');
+    };
+
     const handleLabelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 
         setLabelJson(e.target.value);
@@ -212,6 +230,21 @@ function CustomizeConfig({ onCustomizeConfigChange, customizeConfig }: Customize
                             loading={loadingApps}
                             size="small"
                             fullWidth
+                        />
+                    </Grid>
+                </Grid>
+                <Grid container alignItems="flex-start" spacing={2}>
+                    <Grid size={3} sx={{ minWidth: 100, pt: 1 }}>
+                        <FormLabel>{t('workflow.advancedSettingLabel.customizeSettingLabel.ticketDetailTitleTemplate')}</FormLabel>
+                    </Grid>
+                    <Grid size={9}>
+                        <TextField
+                            fullWidth
+                            size="small"
+                            value={ticketDetailTitleTemplate}
+                            onChange={handleTicketDetailTitleTemplateChange}
+                            placeholder={t('workflow.advancedSettingLabel.customizeSettingLabel.ticketDetailTitleTemplatePlaceholder')}
+                            helperText={t('workflow.advancedSettingLabel.customizeSettingLabel.ticketDetailTitleTemplateHelper')}
                         />
                     </Grid>
                 </Grid>

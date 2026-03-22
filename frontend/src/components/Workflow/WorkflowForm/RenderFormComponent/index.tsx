@@ -6,6 +6,7 @@ import {
     DateField,
     DateTimeField,
     DepartmentField,
+    ExternalDataField,
     FileField,
     NumberField,
     RadioField,
@@ -199,6 +200,13 @@ function RenderFormComponent({ component, handleComponentUpdate, ticketId }: Ren
                     value={value}
                     onChange={handleFieldChange}
                     mode={component.componentPermission === 'readonly' ? 'view' : 'edit'}
+                    props={component.props}
+                />
+            );
+        case 'externaldata':
+            return (
+                <ExternalDataField
+                    value={value}
                     props={component.props}
                 />
             );

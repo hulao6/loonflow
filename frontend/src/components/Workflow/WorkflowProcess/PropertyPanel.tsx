@@ -800,7 +800,27 @@ class externalAssigneeView(View):
                             {currentFormSchema.componentInfoList.map((component: any) => {
                                 if (component.type === 'row') {
                                     return component.children.map((child: any) => {
-                                        return (<Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                                        if (child.type === 'externaldata') {
+                                            const extKey = toCamelCase(child.componentKey);
+                                            const rawPerm = properties?.fieldPermissions?.[extKey];
+                                            const radioValue = rawPerm === 'hidden' ? 'hidden' : 'readonly';
+                                            return (
+                                                <Box key={child.componentKey} sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                                                    <FormLabel id={`field-perm-external-${extKey}`} sx={{ width: '80px' }}>{child.componentName}</FormLabel>
+                                                    <RadioGroup
+                                                        row
+                                                        aria-labelledby={`field-perm-external-${extKey}`}
+                                                        name={`field-perm-external-${extKey}`}
+                                                        value={radioValue}
+                                                        onChange={(e) => handleFieldPermissionChange(extKey, e.target.value)}
+                                                    >
+                                                        <FormControlLabel value="readonly" control={<Radio />} label={t('workflow.propertyPanelLabel.fieldPermissionOptions.readonly')} />
+                                                        <FormControlLabel value="hidden" control={<Radio />} label={t('workflow.propertyPanelLabel.fieldPermissionOptions.hidden')} />
+                                                    </RadioGroup>
+                                                </Box>
+                                            );
+                                        }
+                                        return (<Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }} key={child.componentKey}>
 
                                             <FormLabel id="demo-controlled-radio-buttons-group" sx={{ width: '80px' }}>{child.componentName}</FormLabel>
                                             <RadioGroup

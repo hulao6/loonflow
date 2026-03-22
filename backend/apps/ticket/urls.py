@@ -8,6 +8,7 @@ from apps.ticket.views import (
     TicketCurrentNodeInfosView,
     TicketDetailAdminActionsView,
     TicketMockExternalAssigneeView,
+    TicketMockExternalDataSourceView,
     TicketDraftFileUploadView,
     TicketDraftFileDownloadView,
     TicketFileUploadView,
@@ -27,4 +28,5 @@ urlpatterns = [
     path('/<str:ticket_id>/files', TicketFileUploadView.as_view()),
     path('/<str:tenant_id>/<str:ticket_id>/files/<str:safe_name>', TicketFileDownloadView.as_view()),
     path('/mock_external_assignee', TicketMockExternalAssigneeView.as_view()),
+    path('/mock_external_data_source', TicketMockExternalDataSourceView.as_view()),
 ]

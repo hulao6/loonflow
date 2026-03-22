@@ -521,7 +521,83 @@ class TicketMockExternalAssigneeView(BaseView):
         :param kwargs:
         :return:
         """
+        signature = request.META.get('HTTP_SIGNATURE')
+        timestamp = request.META.get('HTTP_TIMESTAMP')
+        # token = "" # should be the same as you configured in loonflow
+        # if token and signature and timestamp:
+        #     try:
+        #         common_service_ins.signature_check(timestamp, signature, token)
+        #     except CustomCommonException as e:
+        #         return api_response(-1, str(e), {})
+
+        # you can return the assignee email list base on ticket detail info from body
+        # try:
+        #     body = json.loads(request.body.decode('utf-8')) if request.body else {}
+        # except (json.JSONDecodeError, UnicodeDecodeError):
+        #     body = {}
+        # if not isinstance(body, dict):
+        #     body = {}
         return api_response(0, '', {'assignee_email_list': ["blackholll@loonapp.com"]})
+
+
+class TicketMockExternalDataSourceView(BaseView):
+    """
+    Mock endpoint for external data source field testing.
+    Expects the same headers as hook calls: signature + timestamp (md5(timestamp + token)).
+    Request body is the ticket fields JSON object.
+    Response shape matches fetch_external_data_source_value: code 0 and data.value.
+
+    Query params:
+    - style or displayStyle: json | key_value | text (same as form field displayStyle).
+      Demo payload is shaped for that rendering mode.
+    - token: optional, for signature_check when signature/timestamp are sent.
+    """
+
+    @staticmethod
+    def _demo_value_for_style(style: str, _body: dict) -> object:
+        """Minimal sample values for each displayStyle (_body is the ticket fields POST body, unused)."""
+        if style == 'json':
+            return [
+                {'id': 1, 'name': 'demo_item_a', 'ok': True},
+                {'id': 2, 'name': 'demo_item_b', 'ok': False},
+            ]
+
+        if style == 'key_value':
+            return {'a': 1, 'b': 2, 'c': 3}
+
+        return 'this is a sample text from external'
+
+    def post(self, request, *args, **kwargs):
+        signature = request.META.get('HTTP_SIGNATURE')
+        timestamp = request.META.get('HTTP_TIMESTAMP')
+        # token = "" # should be the same as you configured in loonflow
+        # if token and signature and timestamp:
+        #     try:
+        #         common_service_ins.signature_check(timestamp, signature, token)
+        #     except CustomCommonException as e:
+        #         return api_response(-1, str(e), {})
+
+        # you can return the result base on ticket detail info from body
+        try:
+            body = json.loads(request.body.decode('utf-8')) if request.body else {}
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            body = {}
+        if not isinstance(body, dict):
+            body = {}
+
+        raw_style = (
+            request.GET.get('style')
+            or request.GET.get('displayStyle')
+            or 'text'
+        )
+        style = str(raw_style).strip().lower()
+        if style in ('keyvalue', 'key-value'):
+            style = 'key_value'
+        if style not in ('json', 'key_value', 'text'):
+            style = 'text'
+
+        demo_value = self._demo_value_for_style(style, body)
+        return api_response(0, '', {'value': demo_value})
 class TicketCurrentNodeInfosView(BaseView):
     def get(self, request, *args, **kwargs):
         """

@@ -17,6 +17,7 @@ import TicketNodesField from './TicketNodesField';
 import TicketActStateField from './TicketActStateField';
 import WorkflowInfoField from './WorkflowInfoField';
 import TicketCurrentAssigneeInfosField from './TicketCurrentAssigneeInfosField';
+import ExternalDataField from './ExternalDataField';
 
 // 导出所有字段组件
 export { default as TextField } from './TextField';
@@ -38,6 +39,7 @@ export { default as TicketNodesField } from './TicketNodesField';
 export { default as TicketActStateField } from './TicketActStateField';
 export { default as WorkflowInfoField } from './WorkflowInfoField';
 export { default as TicketCurrentAssigneeInfosField } from './TicketCurrentAssigneeInfosField';
+export { default as ExternalDataField } from './ExternalDataField';
 
 // 导出类型定义
 export type { BaseFieldProps, FieldComponentConfig } from './types';
@@ -64,6 +66,7 @@ export const fieldComponentMap = {
     act_state: TicketActStateField,
     workflow_info: WorkflowInfoField,
     current_assignee_infos: TicketCurrentAssigneeInfosField,
+    externaldata: ExternalDataField,
     // 可以继续添加更多字段类型
 };
 

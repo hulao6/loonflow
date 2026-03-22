@@ -131,6 +131,7 @@ function FormDesign(props: FormDesignProps) {
                     placeholder: template.defaultProps.placeholder || '',
                     multiple: template.defaultProps.props?.multiple || false,
                     optionsWithKeys: optionsWithKeys,
+                    ...template.defaultProps.props,
                 },
                 layout: { span: template.defaultProps.layout?.span ?? 6 }
             };

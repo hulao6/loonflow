@@ -42,5 +42,9 @@
     "closed": "Closed"
   },
   "ticketCreated": "Ticket Created",
-  "ticketHandled": "ticket handled"
+  "ticketHandled": "ticket handled",
+  "externalData": {
+    "empty": "No data",
+    "loadError": "Failed to load external data: {{message}}"
+  }
 }

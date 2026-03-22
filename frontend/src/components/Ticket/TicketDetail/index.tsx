@@ -286,7 +286,12 @@ function TicketDetail({ workflowId, workflowVersionName, ticketId, onTicketHandl
         <Typography variant="h6" marginBottom={2}>
 
           {workflowId ? 'New Ticket' : 'Ticket Detail'}
-          <Button variant="text" onClick={() => setOpenWorkflowDiagram(true)}>{formSchema?.workflowMetadata?.name}</Button>
+          <Button variant="text" onClick={() => setOpenWorkflowDiagram(true)}>
+            {formSchema?.workflowMetadata?.ticketDetailTitle
+              ?? (formSchema?.workflowMetadata?.name && formSchema?.workflowMetadata?.versionName
+                ? `${formSchema.workflowMetadata.name} - ${formSchema.workflowMetadata.versionName}`
+                : formSchema?.workflowMetadata?.name)}
+          </Button>
         </Typography>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {formSchema?.componentInfoList.map((component) => {

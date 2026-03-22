@@ -21,6 +21,9 @@ export interface IExtendedProps {
     timeZone?: string;
     timeZoneName?: string;
     titleGenerateMode?: string;
+    dataSourceUrl?: string;
+    dataSourceToken?: string;
+    displayStyle?: 'json' | 'key_value' | 'text';
 }
 
 export interface IFormField {
@@ -38,7 +41,7 @@ export interface IFormField {
 
 export interface ComponentTemplate {
     // type must be snake_case
-    type: 'text' | 'textarea' | 'number' | 'select' | 'radio' | 'checkbox' | 'time' | 'date' | 'datetime' | 'user' | 'department' | 'file' | 'link' | 'richtext' | 'richText' | 'externalData' | 'creator_info' | 'created_at' | 'act_state' | 'workflow_info' | 'current_assignee_infos' | 'title' | 'ticket_node_infos';
+    type: 'text' | 'textarea' | 'number' | 'select' | 'radio' | 'checkbox' | 'time' | 'date' | 'datetime' | 'user' | 'department' | 'file' | 'link' | 'richtext' | 'externaldata' | 'creator_info' | 'created_at' | 'act_state' | 'workflow_info' | 'current_assignee_infos' | 'title' | 'ticket_node_infos';
     componentName: string;
     icon: React.ReactNode;
     defaultProps: Partial<IFormField>;

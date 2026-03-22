@@ -30,6 +30,8 @@ class AppPermissionCheck(MiddlewareMixin):
             return
         if request.path.startswith('/api/v1.0/tickets/mock_external_assignee'):
             return
+        if request.path.startswith('/api/v1.0/tickets/mock_external_data_source'):
+            return
         # OAuth related endpoints don't require authentication
         if request.path.startswith('/api/v1.0/manage/auth/'):
             # Set default tenant_id for OAuth endpoints

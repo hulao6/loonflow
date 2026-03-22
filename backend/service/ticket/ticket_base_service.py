@@ -298,6 +298,11 @@ class TicketBaseService(BaseService):
 
 
         field_permissions = start_node_obj.props.get('field_permissions', {})
+        external_data_field_keys = {
+            c.get('component_key')
+            for c in workflow_component_service_ins.get_workflow_custom_fields(tenant_id, workflow_id, version_id)
+            if c.get('type') == 'externaldata'
+        }
         for field_key, field_permission in field_permissions.items():
             if field_permission == 'required':
                 required_field_list.append(field_key)
@@ -307,6 +312,8 @@ class TicketBaseService(BaseService):
         
         if not skip_fields_required_check:
             for required_field in required_field_list:
+                if required_field in external_data_field_keys:
+                    continue
                 if required_field not in request_data_dict.get('fields', {}).keys():
                     raise CustomCommonException('field {} is required'.format(required_field))
         
@@ -804,17 +811,10 @@ class TicketBaseService(BaseService):
                     field_component['props']['value'] = field_value
                     # component.get('children').append(field_component)
             new_component_result_list.append(component)
-        workflow_basic_obj = workflow_base_service_ins.get_workflow_basic_info_by_id(tenant_id, workflow_id, workflow_version_id)
-
-        version_obj = workflow_base_service_ins.get_workflow_version_info_by_id(tenant_id, workflow_id, workflow_version_id)
-
-        workflow_metadata = dict(
-            id=str(workflow_id),
-            name=workflow_basic_obj.get('name'),
-            version_id=str(workflow_version_id),
-            version_name=version_obj.get('name'),
-            description=workflow_basic_obj.get('description')
-        )  
+        ticket_field_service_ins.apply_external_data_source_fields_to_form(new_component_result_list, ticket_field_value_dict)
+        workflow_metadata = workflow_base_service_ins.build_workflow_metadata_for_ticket_form(
+            tenant_id, workflow_id, str(workflow_version_id)
+        )
         return new_component_result_list, workflow_metadata
                 
     @classmethod
@@ -1521,6 +1521,11 @@ class TicketBaseService(BaseService):
 
 
         field_permissions = current_node_record.props.get('field_permissions', {})
+        external_data_field_keys = {
+            c.get('component_key')
+            for c in workflow_component_service_ins.get_workflow_custom_fields(tenant_id, workflow_id, workflow_version_id)
+            if c.get('type') == 'externaldata'
+        }
         for field_key, field_permission in field_permissions.items():
             if field_permission == 'required':
                 required_field_list.append(field_key)
@@ -1529,6 +1534,8 @@ class TicketBaseService(BaseService):
                 update_field_list.append(field_key)
         if skip_fields_required_check:
             for required_field in required_field_list:
+                if required_field in external_data_field_keys:
+                    continue
                 if required_field not in fields.keys():
                     raise CustomCommonException('field {} is required'.format(required_field))
 

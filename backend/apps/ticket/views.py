@@ -36,7 +36,6 @@ class TicketListView(BaseView):
         Optional('parent_ticket_node_id'): str,
         Optional('page', default=1): And(Use(int), lambda n: n > 0, error='page should be int and greater than 0'),
         Optional('per_page', default=10): And(Use(int), lambda n: n > 0, error='per_page should be int and greater than 0'),
-        Optional('act_state', default=10): And(Use(int), lambda n: n > 0, error='per_page should be int and greater than 0'),
     })
 
     post_schema = Schema({

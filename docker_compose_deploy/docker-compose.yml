@@ -23,17 +23,17 @@ services:
 
   loonflow-ui:
     hostname: loonflow-ui
-    image: blackholll/loonflow-ui:v3.1.0
+    image: blackholll/loonflow-ui:r3.1.0
     container_name: loonflow-ui
     depends_on:
       - loonflow-redis
       - loonflow-pg
     ports:
-      - 8001:80
+      - 80:80
 
   loonflow-backend:
     hostname: loonflow-backend
-    image: blackholll/loonflow-backend:v3.1.0
+    image: blackholll/loonflow-backend:r3.1.0
     container_name: loonflow-backend
     environment:
       DB_NAME: ${POSTGRES_DB}
@@ -41,11 +41,13 @@ services:
       DB_USER: ${POSTGRES_USER}
       DB_PASS: ${POSTGRES_PASSWORD}
       REDIS_HOST: loonflow-redis
-      REDIS_PASS: ${REDIS_PASSWORD}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
       DJANGO_SUPERUSER_PASSWORD: ${ADMIN_PASSWORD}
       TENANT_NAME: ${TENANT_NAME}
       TENANT_DOMAIN: ${TENANT_DOMAIN}
-      LOONFLOW_DATA_DIR: app/loonflow_data
+      LOONFLOW_DATA_DIR: /app/loonflow_data
+      LOG_FILE_MAX_BYTES: ${LOG_FILE_MAX_BYTES}
+      LOG_FILE_BACKUP_COUNT: ${LOG_FILE_BACKUP_COUNT}
     volumes:
       - loonflow_data:/app/loonflow_data
     working_dir: /app/loonflow
@@ -64,7 +66,7 @@ services:
 
   loonflow-task:
     hostname: loonflow-task
-    image: blackholll/loonflow-backend:v3.1.0
+    image: blackholll/loonflow-backend:r3.1.0
     container_name: loonflow-task
     depends_on:
       - loonflow-redis
@@ -76,7 +78,7 @@ services:
       DB_USER: ${POSTGRES_USER}
       DB_PASS: ${POSTGRES_PASSWORD}
       REDIS_HOST: loonflow-redis
-      REDIS_PASS: ${REDIS_PASSWORD}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     command:
       - sh
       - -c

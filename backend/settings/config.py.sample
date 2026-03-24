@@ -2,6 +2,9 @@ from settings.common import *
 
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 LOGGING_LEVEL = os.getenv('LOGGING_LEVEL', 'INFO').upper()
+# Rotate log file by size; total on disk is roughly maxBytes * (backupCount + 1).
+LOG_FILE_MAX_BYTES = int(os.getenv('LOG_FILE_MAX_BYTES', str(10 * 1024 * 1024)))
+LOG_FILE_BACKUP_COUNT = int(os.getenv('LOG_FILE_BACKUP_COUNT', '5'))
 
 ALLOWED_HOSTS = ['*']
 MIDDLEWARE = [
@@ -58,11 +61,6 @@ ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY', '2VLMQOroSgJUC68n30X9VzFkUPzN0oYppr
 LOGGING = {
         'version': 1,
         'disable_existing_loggers': False,
-        'filters': {
-            'require_debug_true': {
-                '()': 'django.utils.log.RequireDebugTrue',
-            },
-        },
         'formatters': {
             'standard': {
                 'format': '%(asctime)s %(pathname)s process-%(process)d thread-%(thread)d %(lineno)d [%(levelname)s]: %(message)s',
@@ -71,20 +69,21 @@ LOGGING = {
         'handlers': {
             'file_handler': {
                 'level': LOGGING_LEVEL,
-                'class': 'logging.FileHandler',
+                'class': 'logging.handlers.RotatingFileHandler',
                 'filename': HOMEPATH + '/loonflow.log',
-                'formatter': 'standard'
+                'maxBytes': LOG_FILE_MAX_BYTES,
+                'backupCount': LOG_FILE_BACKUP_COUNT,
+                'formatter': 'standard',
             },
             'console': {
                 'level': LOGGING_LEVEL,
-                'filters': ['require_debug_true'],
                 'class': 'logging.StreamHandler',
-                'formatter': 'standard'
+                'formatter': 'standard',
             },
         },
         'loggers': {
             'django': {
-                'handlers': ['file_handler'],
+                'handlers': ['file_handler', 'console'],
                 'propagate': True,
                 'level': LOGGING_LEVEL,
                         },

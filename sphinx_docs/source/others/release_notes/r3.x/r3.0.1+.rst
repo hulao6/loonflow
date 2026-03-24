@@ -7,7 +7,7 @@ r3.1.0
 ---------
 - Feature: add Microsoft OIDC and wecom QR scan login
 - Feature: add file&rich text&external data field
-- Feature: add auto layout feature
+- Feature: add workflow design auto layout feature
 - Security: security issues fix
 
 

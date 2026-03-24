@@ -4,6 +4,7 @@
 .. toctree::
    :maxdepth: 2
 
+   tenant
    application
    notification
-   tenant
+   authentication

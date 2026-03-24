@@ -6,10 +6,13 @@ import { getTenantByDomain } from './services/tenant';
 import { setTenantBasicInfo } from './store';
 import PrivateRoute from './utils/PrivateRoute';
 
+import MicrosoftOidcCallback from './components/Auth/MicrosoftOidcCallback';
+import WecomCallback from './components/Auth/WecomCallback';
 import Layout from './components/layout';
 import Role from './components/Organization/Role';
 import UserDept from './components/Organization/UserDept';
 import { ApplicationList } from './components/Setting/Application';
+import AuthenticationList from './components/Setting/Authentication';
 import { NotificationList } from './components/Setting/Notification';
 import Tenant from './components/Setting/Tenant';
 import AllTicket from './components/Ticket/AllTicket';
@@ -55,6 +58,16 @@ const App = () => {
       key={'signin'}
       path={'signIn'}
       element={< SignIn />}
+    />,
+    <Route
+      key={'oauth-wecom-callback'}
+      path={'/oauth/wecom/callback'}
+      element={<WecomCallback />}
+    />,
+    <Route
+      key={'oauth-microsoft-callback'}
+      path={'/oauth/microsoft/callback'}
+      element={<MicrosoftOidcCallback />}
     />,
     <Route
       key={'root'}
@@ -143,6 +156,10 @@ const App = () => {
       <Route key={'notification'}
         path={'/setting/notification'}
         element={<PrivateRoute element={<Layout children={<NotificationList />} />} />}
+      />
+      <Route key={'authentication'}
+        path={'/setting/authentication'}
+        element={<PrivateRoute element={<Layout children={<AuthenticationList />} />} />}
       />
     </Route>
   ];

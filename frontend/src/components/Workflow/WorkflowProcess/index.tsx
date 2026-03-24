@@ -14,7 +14,8 @@ import {
     ReactFlow,
     ReactFlowProvider,
     useEdgesState,
-    useNodesState
+    useNodesState,
+    type ReactFlowInstance,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -31,6 +32,7 @@ import { CustomNode } from './CustomNode';
 import NodePanel from './NodePanel';
 import PropertyPanel from './PropertyPanel';
 import Toolbar from './Toolbar';
+import { getLayoutedNodes } from './dagreLayout';
 
 // edge definition, move to the outside of the component to avoid re-creation
 const edgeTypes: EdgeTypes = {
@@ -155,6 +157,7 @@ function WorkflowProcess({
     const [snackbarMessage] = useState('');
     const [snackbarSeverity] = useState<'error' | 'warning' | 'info' | 'success'>('error');
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
+    const reactFlowInstanceRef = useRef<ReactFlowInstance | null>(null);
     const { t } = useTranslation();
 
     // hover tooltip state (only enabled in simpleViewMode) 
@@ -396,7 +399,7 @@ function WorkflowProcess({
         } else if (assigneeType === 'variables') {
             const assigneeList = assignee.split(',');
             const assigneeInfoList = [];
-            assigneeList.map((assignee) => {
+            assigneeList.forEach((assignee) => {
                 if (assignee === 'creator') {
                     assigneeInfoList.push(t('workflow.propertyPanelLabel.assigneeTypeVariableOptions.creator'));
                 } else if (assignee === 'dept_approver') {
@@ -628,6 +631,21 @@ function WorkflowProcess({
         }
     }, [selectedElement, setNodes, setEdges, nodes, saveToHistory, notifyParentChange]);
 
+    const handleAutoLayout = useCallback(() => {
+        if (nodes.length === 0) {
+            return;
+        }
+        const layouted = getLayoutedNodes(nodes, edges);
+        setNodes(layouted);
+        saveToHistory(layouted, edges);
+        notifyParentChange(layouted, edges);
+        setSelectedElement(null);
+        setPropertyPanelOpen(false);
+        requestAnimationFrame(() => {
+            reactFlowInstanceRef.current?.fitView({ padding: 0.2, duration: 200 });
+        });
+    }, [nodes, edges, setNodes, saveToHistory, notifyParentChange]);
+
     const handleCopy = useCallback(() => {
         if (selectedElement) {
             if ('source' in selectedElement) {
@@ -710,8 +728,10 @@ function WorkflowProcess({
                             onRedo={handleRedo}
                             onDelete={handleDelete}
                             onCopy={handleCopy}
+                            onAutoLayout={handleAutoLayout}
                             canDelete={!!selectedElement}
                             canCopy={!!selectedElement}
+                            canAutoLayout={nodes.length > 0}
                             canUndo={historyIndex > 0}
                             canRedo={historyIndex < history.length - 1}
                         /> : null}
@@ -741,8 +761,8 @@ function WorkflowProcess({
                             attributionPosition="bottom-left"
                             snapToGrid={true}
                             snapGrid={[15, 15]}
-                            onInit={(reactFlowInstance) => {
-                                console.log('ReactFlow 初始化完成:', reactFlowInstance);
+                            onInit={(instance) => {
+                                reactFlowInstanceRef.current = instance;
                             }}
                             onLoad={(reactFlowInstance) => {
                                 console.log('ReactFlow 加载完成:', reactFlowInstance);

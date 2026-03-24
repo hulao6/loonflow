@@ -6,6 +6,8 @@ import {
     CheckBox as CheckBoxIcon,
     Person as CreatorIcon,
     AcUnit as DefaultIcon,
+    CloudOutlined as ExternalDataIcon,
+    InsertDriveFile as FileIcon,
     Groups as GroupsIcon,
     Pin as NumberIcon,
     RadioButtonChecked as RadioButtonIcon,
@@ -40,6 +42,17 @@ const getBasicComponentTemplates = (t: any): ComponentTemplate[] => [
             fieldKey: '',
             placeholder: '',
             layout: { span: 6 }
+        }
+    },
+    {
+        type: 'richtext' as ComponentTemplate['type'],
+        componentName: t('workflow.componentCategories.richTextComponent'),
+        icon: <TextFieldsIcon />,
+        defaultProps: {
+            description: '',
+            fieldKey: '',
+            placeholder: '',
+            layout: { span: 12 }
         }
     },
     {
@@ -155,17 +168,16 @@ const getBasicComponentTemplates = (t: any): ComponentTemplate[] => [
             }
         }
     },
-    // {
-    //     type: 'file',
-    //     componentName: t('workflow.componentCategories.fileComponent'),
-    //     icon: <FileIcon />,
-    //     defaultProps: {
-    //         // label: '附件',
-    //         description: '',
-    //         fieldKey: '',
-    //         layout: { span: 6 }
-    //     }
-    // },
+    {
+        type: 'file',
+        componentName: t('workflow.componentCategories.fileComponent'),
+        icon: <FileIcon />,
+        defaultProps: {
+            description: '',
+            fieldKey: '',
+            layout: { span: 6 }
+        }
+    },
     {
         type: 'user',
         componentName: t('workflow.componentCategories.userComponent'),
@@ -191,18 +203,22 @@ const getBasicComponentTemplates = (t: any): ComponentTemplate[] => [
                 multiple: false
             }
         }
+    },
+    {
+        type: 'externaldata',
+        componentName: t('workflow.componentCategories.externalDataComponent'),
+        icon: <ExternalDataIcon />,
+        defaultProps: {
+            description: '',
+            fieldKey: '',
+            layout: { span: 12 },
+            props: {
+                dataSourceUrl: '',
+                dataSourceToken: '',
+                displayStyle: 'text' as const
+            }
+        }
     }
-    // {
-    //     type: 'externalData',
-    //     componentName: t('workflow.componentCategories.externalDataComponent'),
-    //     icon: <DateIcon />,
-    //     defaultProps: {
-    //         // label: '外部数据源',
-    //         description: '',
-    //         fieldKey: '',
-    //         layout: { span: 6 }
-    //     }
-    // }
 ];
 
 const getInfoComponentTemplates = (t: any): ComponentTemplate[] => [

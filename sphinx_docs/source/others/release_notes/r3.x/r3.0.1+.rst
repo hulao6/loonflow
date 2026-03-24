@@ -1,6 +1,16 @@
 r3.0.1+
 ==================
 
+
+---------
+r3.1.0
+---------
+- Feature: add Microsoft OIDC and wecom QR scan login
+- Feature: add file&rich text&external data field
+- Feature: add workflow design auto layout feature
+- Security: security issues fix
+
+
 ---------
 r3.0.1
 ---------
@@ -12,3 +22,4 @@ r3.0.1
 - Quality (templates/dates): date/time placeholders fixed; title template parsing fixed (creator, select display, editing).
 - Ops: stdout logging restored; add initial user on deploy.
 - Docs: issue templates refreshed; user/API docs.
+

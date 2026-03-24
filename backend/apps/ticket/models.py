@@ -113,7 +113,8 @@ class CustomField(BaseCommonModel):
         ('cascade', 'cascade'),
         ('user', 'user'),
         ('file', 'file'),
-        ('rich_text', 'rich_text')
+        ('richtext', 'richtext'),
+        ('externaldata', 'externaldata'),
     ]
     field_key = models.CharField("field_key", max_length=50)
     ticket = models.ForeignKey(Record, db_constraint=False, on_delete=models.DO_NOTHING)

@@ -1,11 +1,11 @@
 // src/components/MenuItem.ts
+import { AccountTree as AccountTreeIcon, Assignment as AssignmentIcon, Home as HomeIcon, Schema as SchemaIcon, Settings as SettingsIcon } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
+import { useSelector } from 'react-redux';
+import SignIn from '../SignIn';
 import Home from './home/HomePage';
 import Home2 from './home2/HomePage';
 import DutyTicket from './Ticket/DutyTicket';
-import SignIn from '../SignIn';
-import { Home as HomeIcon, AccountTree as AccountTreeIcon, Assignment as AssignmentIcon, Schema as SchemaIcon, Settings as SettingsIcon } from '@mui/icons-material';
-import { useSelector } from 'react-redux';
 
 
 export interface IMenuItem {
@@ -66,6 +66,7 @@ const useMenuItems = (): IMenuItem[] => {
         { text: t('menu.tenant'), path: '/setting/tenant', component: Home },
         { text: t('menu.application'), path: '/setting/application', component: Home },
         { text: t('menu.notification'), path: '/setting/notification', component: Home },
+        { text: t('menu.authentication'), path: '/setting/authentication', component: Home },
       ]
     },
     { text: t('menu.signin'), path: 'signin', component: SignIn, isSingleLayout: true, isVisibleInMenu: false },

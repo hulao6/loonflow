@@ -123,7 +123,8 @@ class Component(BaseWorkflowModel):
         ('cascade', 'cascade'),
         ('user', 'user'),
         ('file', 'file'),
-        ('rich_text', 'rich_text'),
+        ('richtext', 'richtext'),
+        ('externaldata', 'externaldata'),
         ('row', 'row'),
         ('col', 'col')
     ]

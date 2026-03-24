@@ -42,7 +42,7 @@ media/notice_script/*.*
 
 # Database and Configuration
 tests/testloonflow.sql
-settings/config.py
+backend/settings/config.py
 loonflow_test.db
 docker_compose_deploy/loonflow_only/dbdata/*
 docker_compose_deploy/loonflow_shutongflow/dbdata/*
@@ -52,3 +52,13 @@ docker_compose_deploy/loonflow_shutongflow/dbdata/*
 clock_flag.txt
 
 *.mo
+
+# Yarn related
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+.pnp.*
+.cursor/*

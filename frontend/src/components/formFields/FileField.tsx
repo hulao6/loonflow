@@ -17,24 +17,28 @@ import {
     Typography
 } from '@mui/material';
 import React, { useRef, useState } from 'react';
+import { uploadTicketFile, uploadDraftFile } from '../../services/ticket';
+import apiClient from '../../services/api';
 import ViewField from './ViewField';
 
-interface FileInfo {
-    id: string;
-    name: string;
-    size: number;
-    type: string;
-    url?: string;
-    file?: File;
+/** 文件字段持久化格式：JSON 数组 [{ file_name, file_path }, ...] */
+export interface FileFieldItem {
+    file_name: string;
+    file_path: string;
 }
 
 interface FileFieldProps {
-    value: string | FileInfo[];
+    /** 值为 JSON 字符串或 FileFieldItem[]，格式为 [{ file_name, file_path }, ...] */
+    value: string | FileFieldItem[];
     fieldRequired: boolean;
-    onChange: (value: string | FileInfo[]) => void;
+    onChange: (value: FileFieldItem[]) => void;
     mode: 'view' | 'edit';
     props: any;
+    /** 工单 ID；有则用工单上传接口，无则用草稿上传（新建工单场景，提交时后端会迁移到工单目录） */
+    ticketId?: string;
 }
+
+const TICKET_FILE_URL_PREFIX = '/api/v1.0/tickets/';
 
 function FileField({
     value = '',
@@ -42,31 +46,28 @@ function FileField({
     onChange,
     mode,
     props,
+    ticketId,
 }: FileFieldProps) {
 
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState<string>('');
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // 解析文件值
-    const parseFileValue = (val: any): FileInfo[] => {
+    // 解析为统一展示格式 [{ file_name, file_path }, ...]
+    const parseFileValue = (val: any): FileFieldItem[] => {
         if (!val) return [];
-
         if (typeof val === 'string') {
             try {
-                // 尝试解析 JSON 字符串
                 const parsed = JSON.parse(val);
-                return Array.isArray(parsed) ? parsed : [];
+                if (!Array.isArray(parsed)) return [];
+                return parsed.filter((x: any) => x && typeof x.file_name === 'string' && typeof x.file_path === 'string');
             } catch {
-                // 如果不是 JSON，可能是文件名字符串
-                return val ? [{ id: '1', name: val, size: 0, type: '' }] : [];
+                return [];
             }
         }
-
         if (Array.isArray(val)) {
-            return val;
+            return val.filter((x: any) => x && typeof x.file_name === 'string' && typeof x.file_path === 'string');
         }
-
         return [];
     };
 
@@ -89,78 +90,90 @@ function FileField({
         return '📎';
     };
 
-    // 处理文件选择
-    const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    // 选择文件后先上传（有 ticketId 用工单上传，无则用草稿上传），再写入格式 [{ file_name, file_path }, ...]
+    const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const files = event.target.files;
         if (!files || files.length === 0) return;
 
         setError('');
         setUploading(true);
 
+        const maxFiles = props?.maxFiles || 10;
+        const maxSize = props?.maxSize || 10 * 1024 * 1024; // 默认 10MB
+        const currentFiles = parseFileValue(value);
+
+        for (const file of Array.from(files)) {
+            if (file.size > maxSize) {
+                setError(`文件 ${file.name} 超过大小限制 ${formatFileSize(maxSize)}`);
+                setUploading(false);
+                if (fileInputRef.current) fileInputRef.current.value = '';
+                return;
+            }
+        }
+        if (currentFiles.length + files.length > maxFiles) {
+            setError(`最多只能上传 ${maxFiles} 个文件`);
+            setUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
+
+        const uploadOne = ticketId
+            ? (file: File) => uploadTicketFile(ticketId, file)
+            : uploadDraftFile;
+
         try {
-            const newFiles: FileInfo[] = Array.from(files).map((file, index) => ({
-                id: `file_${Date.now()}_${index}`,
-                name: file.name,
-                size: file.size,
-                type: file.type,
-                file: file
-            }));
-
-            const currentFiles = parseFileValue(value);
-            const updatedFiles = [...currentFiles, ...newFiles];
-
-            // 限制文件数量
-            const maxFiles = props?.maxFiles || 10;
-            if (updatedFiles.length > maxFiles) {
-                setError(`最多只能上传 ${maxFiles} 个文件`);
-                setUploading(false);
-                return;
+            const uploadedList: FileFieldItem[] = [];
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const res = await uploadOne(file) as { code?: number; msg?: string; data?: { url: string; name: string; size: number } };
+                if (res?.code === 0 && res?.data) {
+                    uploadedList.push({
+                        file_name: res.data.name,
+                        file_path: res.data.url
+                    });
+                } else {
+                    setError((res as { msg?: string })?.msg || '上传失败');
+                    setUploading(false);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                    return;
+                }
             }
-
-            // 限制文件大小
-            const maxSize = props?.maxSize || 10 * 1024 * 1024; // 默认 10MB
-            const oversizedFiles = newFiles.filter(file => file.size > maxSize);
-            if (oversizedFiles.length > 0) {
-                setError(`文件 ${oversizedFiles[0].name} 超过大小限制 ${formatFileSize(maxSize)}`);
-                setUploading(false);
-                return;
-            }
-
-            onChange(updatedFiles);
+            onChange([...currentFiles, ...uploadedList]);
         } catch (err) {
             setError('文件处理失败');
         } finally {
             setUploading(false);
-            // 清空 input 值，允许重复选择同一文件
-            if (fileInputRef.current) {
-                fileInputRef.current.value = '';
-            }
+            if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
 
-    // 删除文件
-    const handleDeleteFile = (fileId: string) => {
+    // 删除文件（按 file_path 区分）
+    const handleDeleteFile = (filePath: string) => {
         const currentFiles = parseFileValue(value);
-        const updatedFiles = currentFiles.filter(file => file.id !== fileId);
-        onChange(updatedFiles);
+        onChange(currentFiles.filter(f => f.file_path !== filePath));
     };
 
-    // 下载文件
-    const handleDownloadFile = (file: FileInfo) => {
-        if (file.url) {
-            // 如果有 URL，直接下载
-            window.open(file.url, '_blank');
-        } else if (file.file) {
-            // 如果是本地文件，创建下载链接
-            const url = URL.createObjectURL(file.file);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = file.name;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+    // 下载文件（工单附件需带鉴权请求）
+    const handleDownloadFile = async (file: FileFieldItem) => {
+        if (!file.file_path) return;
+        if (file.file_path.startsWith(TICKET_FILE_URL_PREFIX)) {
+            try {
+                const res = await apiClient.get(file.file_path, { responseType: 'blob' });
+                const blob = res.data as Blob;
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = file.file_name || 'download';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            } catch {
+                setError('下载失败');
+            }
+            return;
         }
+        window.open(file.file_path, '_blank');
     };
 
     // view mode - 只显示文件列表
@@ -175,7 +188,7 @@ function FileField({
             <Box>
                 {files.map((file) => (
                     <Box
-                        key={file.id}
+                        key={file.file_path}
                         sx={{
                             display: 'flex',
                             alignItems: 'center',
@@ -187,26 +200,19 @@ function FileField({
                             backgroundColor: '#f5f5f5'
                         }}
                     >
-                        <Typography sx={{ fontSize: '1.2em' }}>
-                            {getFileIcon(file.type)}
-                        </Typography>
+                        <Typography sx={{ fontSize: '1.2em' }}>{getFileIcon('')}</Typography>
                         <Box sx={{ flex: 1 }}>
                             <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                                {file.name}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                                {formatFileSize(file.size)}
+                                {file.file_name}
                             </Typography>
                         </Box>
-                        {file.url && (
-                            <IconButton
-                                size="small"
-                                onClick={() => handleDownloadFile(file)}
-                                title="下载文件"
-                            >
-                                <Download fontSize="small" />
-                            </IconButton>
-                        )}
+                        <IconButton
+                            size="small"
+                            onClick={() => handleDownloadFile(file)}
+                            title="下载文件"
+                        >
+                            <Download fontSize="small" />
+                        </IconButton>
                     </Box>
                 ))}
             </Box>
@@ -283,7 +289,7 @@ function FileField({
                         <List dense>
                             {files.map((file) => (
                                 <ListItem
-                                    key={file.id}
+                                    key={file.file_path}
                                     sx={{
                                         border: '1px solid #e0e0e0',
                                         borderRadius: 1,
@@ -292,10 +298,7 @@ function FileField({
                                     }}
                                 >
                                     <FilePresent sx={{ mr: 1, color: '#666' }} />
-                                    <ListItemText
-                                        primary={file.name}
-                                        secondary={`${formatFileSize(file.size)} • ${file.type || '未知类型'}`}
-                                    />
+                                    <ListItemText primary={file.file_name} />
                                     <ListItemSecondaryAction>
                                         <IconButton
                                             size="small"
@@ -306,7 +309,7 @@ function FileField({
                                         </IconButton>
                                         <IconButton
                                             size="small"
-                                            onClick={() => handleDeleteFile(file.id)}
+                                            onClick={() => handleDeleteFile(file.file_path)}
                                             title="删除"
                                             color="error"
                                         >

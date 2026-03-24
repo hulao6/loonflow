@@ -73,7 +73,18 @@
     "min": "最小值",
     "max": "最大值",
     "unitPrefix": "单位前缀",
-    "unitSuffix": "单位后缀"
+    "unitSuffix": "单位后缀",
+    "dataSourceUrl": "数据源地址",
+    "dataSourceToken": "Token",
+    "displayStyle": "展示样式",
+    "displayStyleJson": "JSON",
+    "displayStyleKeyValue": "键值对",
+    "displayStyleText": "文本",
+    "externalDataReadonlyNote": "该字段始终只读，查看工单时由数据源接口返回展示内容。",
+    "dataSourceUrlRequired": "请填写数据源地址",
+    "dataSourceTokenRequired": "请填写 Token",
+    "showExternalDataSample": "显示外部数据示例",
+    "hideExternalDataSample": "隐藏外部数据示例"
   },
   "componentCategories": {
     "basicComponent": "基础组件",
@@ -145,6 +156,7 @@
     "redo": "重做",
     "copy": "复制",
     "delete": "删除",
+    "autoLayout": "自动优化布局",
     "clearCanvas": "清空画布"
   },
   "propertyPanelLabel": {
@@ -321,6 +333,9 @@
     },
     "customizeSettingLabel": {
       "authorizedApp": "应用授权",
+      "ticketDetailTitleTemplate": "工单页流程标题",
+      "ticketDetailTitleTemplatePlaceholder": "{name} - {version_name}",
+      "ticketDetailTitleTemplateHelper": "占位符：{name} 流程名，{version_name} 版本名，{description} 描述。留空则使用默认「流程名 - 版本名」。",
       "labelConfig": "标签配置",
       "hookConfig": "Hook配置",
       "hookUrl": "Hook地址",

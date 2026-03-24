@@ -13,6 +13,7 @@ import {
     Redo as RedoIcon,
     Delete as DeleteIcon,
     ContentCopy as CopyIcon,
+    AutoAwesome as AutoLayoutIcon,
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 interface ToolbarProps {
@@ -21,8 +22,10 @@ interface ToolbarProps {
     onRedo: () => void;
     onDelete: () => void;
     onCopy: () => void;
+    onAutoLayout: () => void;
     canDelete: boolean;
     canCopy: boolean;
+    canAutoLayout: boolean;
     canUndo: boolean;
     canRedo: boolean;
 }
@@ -33,8 +36,10 @@ const Toolbar: React.FC<ToolbarProps> = ({
     onRedo,
     onDelete,
     onCopy,
+    onAutoLayout,
     canDelete,
     canCopy,
+    canAutoLayout,
     canUndo,
     canRedo,
 }) => {
@@ -116,6 +121,19 @@ const Toolbar: React.FC<ToolbarProps> = ({
 
             {/* 画布操作 */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Tooltip title={t('workflow.toolbarLabel.autoLayout')}>
+                    <span>
+                        <IconButton
+                            onClick={onAutoLayout}
+                            size="small"
+                            color="primary"
+                            disabled={!canAutoLayout}
+                        >
+                            <AutoLayoutIcon />
+                        </IconButton>
+                    </span>
+                </Tooltip>
+
                 <Tooltip title={t('workflow.toolbarLabel.clearCanvas')}>
                     <span>
                         <IconButton

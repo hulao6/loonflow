@@ -19,6 +19,7 @@
     "sourceNodeCannotBeEnd": "排他网关\"{{nodeName}}\"的起始节点\"{{sourceNodeName}}\"不能是结束节点类型"
   },
   "fieldPermission": {
+    "externalDataReadOnlyOrHidden": "节点\"{{nodeName}}\"中外部数据源字段\"{{fieldName}}\"只能设置为只读或隐藏",
     "infoComponentReadOnly": "信息组件\"{{key}}\"的只能设置为隐藏或者只读",
     "startNodeNeedInputField": "开始节点\"{{nodeName}}\"的字段权限中至少有一个可输入字段",
     "autoTitleMustHidden": "存在自动生成标题时，开始节点\"{{nodeName}}\"必须将标题字段设置为隐藏",
@@ -27,7 +28,9 @@
   "form": {
     "formDesignEmpty": "表单设计不能为空",
     "rowComponentNoChildren": "行组件不能没有子组件",
-    "titleComponentCountError": "表单中标题组件（type=\"title\"）有且只能有一个，当前为{{count}}个"
+    "titleComponentCountError": "表单中标题组件（type=\"title\"）有且只能有一个，当前为{{count}}个",
+    "externalDataUrlRequired": "外部数据源字段「{{fieldName}}」必须填写数据源地址",
+    "externalDataTokenRequired": "外部数据源字段「{{fieldName}}」必须填写 Token"
   },
   "hook": {
     "hookUrlRequired": "钩子节点\"{{nodeName}}\"必须填写hook地址",

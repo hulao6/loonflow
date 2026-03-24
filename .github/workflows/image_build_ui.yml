@@ -3,7 +3,7 @@ name: Build Frontend Images
 on:
   push:
     tags: ['r**']
-    # branches: [v3.0.1]
+    # branches: [v3.1.0]
 
 
 jobs:
@@ -11,14 +11,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       
+      # setup-node cache:yarn runs yarn before Corepack; use actions/cache instead for Yarn 4.
       - name: Setup Node.js 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '22.x'
-          cache: 'npm'
-          
+
       - name: Enable Corepack and setup Yarn
         run: |
           corepack enable

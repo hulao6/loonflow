@@ -42,5 +42,9 @@
     "closed": "已关闭"
   },
   "ticketCreated": "工单已创建",
-  "ticketHandled": "工单已处理"
+  "ticketHandled": "工单已处理",
+  "externalData": {
+    "empty": "暂无数据",
+    "loadError": "外部数据加载失败：{{message}}"
+  }
 }

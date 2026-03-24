@@ -251,6 +251,54 @@ class WorkflowBaseService(BaseService):
         return True
 
     @classmethod
+    def _format_ticket_detail_title(cls, workflow_basic_obj: dict, version_obj: dict) -> str:
+        """
+        Build the title shown on ticket detail / new ticket from optional label.ticket_detail_title_template.
+        Template uses Python str.format with placeholders: name, version_name, description.
+        """
+        label = workflow_basic_obj.get('label') or {}
+        if not isinstance(label, dict):
+            label = {}
+        template = (
+            label.get('ticket_detail_title_template')
+            or label.get('ticketDetailTitleTemplate')
+            or ''
+        )
+        if isinstance(template, str):
+            template = template.strip()
+        else:
+            template = ''
+        name = workflow_basic_obj.get('name') or ''
+        version_name = version_obj.get('name') or ''
+        description = workflow_basic_obj.get('description') or ''
+        ctx = {
+            'name': name,
+            'version_name': version_name,
+            'description': description,
+        }
+        if template:
+            try:
+                return template.format(**ctx)
+            except (KeyError, ValueError, IndexError):
+                return f'{name} - {version_name}'
+        return f'{name} - {version_name}'
+
+    @classmethod
+    def build_workflow_metadata_for_ticket_form(cls, tenant_id: str, workflow_id: str, version_id: str) -> dict:
+        """workflow_metadata for ticket creation form and ticket detail form APIs."""
+        workflow_basic_obj = cls.get_workflow_basic_info_by_id(tenant_id, workflow_id, version_id)
+        version_obj = cls.get_workflow_version_info_by_id(tenant_id, workflow_id, version_id)
+        ticket_detail_title = cls._format_ticket_detail_title(workflow_basic_obj, version_obj)
+        return dict(
+            id=str(workflow_id),
+            name=workflow_basic_obj.get('name'),
+            version_id=str(version_id),
+            version_name=version_obj.get('name'),
+            description=workflow_basic_obj.get('description'),
+            ticket_detail_title=ticket_detail_title,
+        )
+
+    @classmethod
     def get_ticket_creation_form(cls, workflow_id: str, tenant_id: str, operator_id: str, version_name: str) -> dict:
         """
         get ticket creation form
@@ -276,23 +324,27 @@ class WorkflowBaseService(BaseService):
                 new_children_length = 0
                 new_children = []
                 for child_component in component['children']:
-                    if init_node_field_permissions.get(child_component['component_key']) is not None and init_node_field_permissions.get(child_component['component_key']) != 'hidden' :
-                        child_component['component_permission'] = (init_node_field_permissions.get(child_component['component_key']))
+                    perm = init_node_field_permissions.get(child_component['component_key'])
+                    if child_component.get('type') == 'externaldata':
+                        # Unconfigured permission defaults to visible read-only (only 'hidden' hides the field)
+                        if perm == 'hidden':
+                            continue
+                        child_component['component_permission'] = 'readonly'
                         new_children.append(child_component)
                         new_children_length += 1
+                        continue
+                    if perm is None or perm == 'hidden':
+                        continue
+                    child_component['component_permission'] = perm
+                    new_children.append(child_component)
+                    new_children_length += 1
                 if new_children_length != 0:
                     new_component = copy.deepcopy(component)
                     new_component['children'] = new_children
                     result_component_list.append(new_component)
-        workflow_basic_obj = workflow_base_service_ins.get_workflow_basic_info_by_id(tenant_id, workflow_id, version_obj.id)
-
-        workflow_metadata = dict(
-            id=workflow_id,
-            name=workflow_basic_obj.get('name'),
-            version_id=str(version_obj.id),
-            version_name=version_obj.name,
-            description=workflow_basic_obj.get('description')
-        )        
+        workflow_metadata = cls.build_workflow_metadata_for_ticket_form(
+            tenant_id, workflow_id, str(version_obj.id)
+        )
         return result_component_list, workflow_metadata
 
     @classmethod
@@ -365,8 +417,16 @@ class WorkflowBaseService(BaseService):
                 new_children = []
                 children_length = 0
                 for child_component in component['children']:
-                    if node_form_permission.get(child_component['component_key']) is not None and node_form_permission.get(child_component['component_key']) != 'hidden' :
-                        child_component['component_permission'] = (node_form_permission.get(child_component['component_key']))
+                    perm = node_form_permission.get(child_component['component_key'])
+                    if child_component.get('type') == 'externaldata':
+                        if perm == 'hidden':
+                            continue
+                        child_component['component_permission'] = 'readonly'
+                        new_children.append(child_component)
+                        children_length += 1
+                        continue
+                    if perm is not None and perm != 'hidden':
+                        child_component['component_permission'] = perm
                         new_children.append(child_component)
                         children_length += 1
                 if children_length != 0:

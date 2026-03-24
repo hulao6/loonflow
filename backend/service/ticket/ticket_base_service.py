@@ -1,8 +1,11 @@
+import re
 import copy
 import json
 import datetime
 import logging
+import os
 import random
+import shutil
 
 import redis
 from django.db import transaction
@@ -32,6 +35,68 @@ from service.workflow.workflow_node_service import workflow_node_service_ins
 from service.workflow.workflow_edge_service import workflow_edge_service_ins
 from service.workflow.workflow_permission_service import workflow_permission_service_ins
 from service.workflow.workflow_component_service import workflow_component_service_ins
+from service.common.datetime_timezone_util import parse_datetime_filter_param
+
+DRAFT_FILE_URL_PREFIX = "/api/v1.0/tickets/draft/files/"
+
+
+def _migrate_draft_files_in_fields(ticket_id, fields_dict, upload_dir):
+    """
+    migrate draft files in fields to ticket directory
+    draft_url: /api/v1.0/tickets/{tenant_id}/draft/files/{file_name}?token=xx?timestamp=xxx
+    :param tenant_id:
+    :param ticket_id:
+    :param fields_dict:
+    :param upload_dir:
+    :return:
+    
+    """
+    pattern = r'/api/v1\.0/tickets/([^/]+)/draft/files/([^/]+\.\w+)$'
+
+    if not fields_dict or not upload_dir:
+        return fields_dict
+    result = copy.deepcopy(fields_dict)
+    for field_key, field_value in result.items():
+        try:
+            arr = json.loads(field_value) if isinstance(field_value, str) else field_value
+            if not isinstance(arr, list):
+                continue
+            new_list = []
+            for item in arr:
+                if not isinstance(item, dict) or 'file_path' not in item:
+                    new_list.append(item)
+                    continue
+                file_path = item.get('file_path') or ''
+                fp = file_path.split('?')[0]
+                if not re.match(pattern, fp):
+                    new_list.append(item)
+                    continue
+                
+                safe_name = re.match(pattern, fp).group(2)
+                if not safe_name:
+                    new_list.append(item)
+                    continue
+                draft_path = os.path.join(upload_dir, 'draft', safe_name)
+                if not os.path.isfile(draft_path):
+                    new_list.append(item)
+                    continue
+                ticket_dir = os.path.join(upload_dir, str(ticket_id))
+                try:
+                    os.makedirs(ticket_dir, exist_ok=True)
+                except OSError:
+                    continue
+                dest_path = os.path.join(ticket_dir, safe_name)
+                try:
+                    shutil.move(draft_path, dest_path)
+                except (OSError, shutil.Error):
+                    continue
+                new_url = "/api/v1.0/tickets/{}/files/{}".format(ticket_id, safe_name)
+                new_url = fp.replace('/draft/', f'/{ticket_id}/')
+                new_list.append(dict(item, file_path=new_url))
+            result[field_key] = json.dumps(new_list) if isinstance(field_value, str) else new_list
+        except (json.JSONDecodeError, TypeError, ValueError):
+            continue
+    return result
 
 
 class TicketBaseService(BaseService):
@@ -96,9 +161,9 @@ class TicketBaseService(BaseService):
         if search_value:
             query_params &= Q(title__contains=search_value)
         if create_start:
-            query_params &= Q(created_at__gte=create_start)
+            query_params &= Q(created_at__gte=parse_datetime_filter_param(create_start))
         if create_end:
-            query_params &= Q(created_at__lte=create_end)
+            query_params &= Q(created_at__lte=parse_datetime_filter_param(create_end))
         if workflow_ids:
             workflow_id_str_list = workflow_ids.split(',')
             query_workflow_id_list = [workflow_id_str for workflow_id_str in workflow_id_str_list]
@@ -234,6 +299,11 @@ class TicketBaseService(BaseService):
 
 
         field_permissions = start_node_obj.props.get('field_permissions', {})
+        external_data_field_keys = {
+            c.get('component_key')
+            for c in workflow_component_service_ins.get_workflow_custom_fields(tenant_id, workflow_id, version_id)
+            if c.get('type') == 'externaldata'
+        }
         for field_key, field_permission in field_permissions.items():
             if field_permission == 'required':
                 required_field_list.append(field_key)
@@ -243,6 +313,8 @@ class TicketBaseService(BaseService):
         
         if not skip_fields_required_check:
             for required_field in required_field_list:
+                if required_field in external_data_field_keys:
+                    continue
                 if required_field not in request_data_dict.get('fields', {}).keys():
                     raise CustomCommonException('field {} is required'.format(required_field))
         
@@ -263,6 +335,14 @@ class TicketBaseService(BaseService):
                                      workflow_version_id=version_id)
         ticket_record.save()
         ticket_id = ticket_record.id
+
+        # draft files to ticket files
+        loonflow_data_dir = getattr(settings, 'LOONFLOW_DATA_DIR', None)
+        if loonflow_data_dir and request_data_dict.get('fields'):
+            upload_dir = os.path.join(loonflow_data_dir, str(tenant_id), 'ticket_uploads')
+            request_data_dict['fields'] = _migrate_draft_files_in_fields(
+                ticket_id, request_data_dict['fields'], upload_dir
+            )
 
         # add ticket cc_to user record
         ticket_user_service_ins.add_record(tenant_id, operator_id, ticket_id, True, False, False, False)
@@ -719,7 +799,7 @@ class TicketBaseService(BaseService):
                 else: 
                     component_result_list = workflow_base_service_ins.get_workflow_node_form(tenant_id, workflow_id, workflow_version_id, assignee_node_ids.split(',')[0])
 
-        # todo: set field value
+        # set field value
         new_component_result_list = []
         for component in component_result_list:
             # new_component = copy.deepcopy(component)
@@ -732,17 +812,10 @@ class TicketBaseService(BaseService):
                     field_component['props']['value'] = field_value
                     # component.get('children').append(field_component)
             new_component_result_list.append(component)
-        workflow_basic_obj = workflow_base_service_ins.get_workflow_basic_info_by_id(tenant_id, workflow_id, workflow_version_id)
-
-        version_obj = workflow_base_service_ins.get_workflow_version_info_by_id(tenant_id, workflow_id, workflow_version_id)
-
-        workflow_metadata = dict(
-            id=str(workflow_id),
-            name=workflow_basic_obj.get('name'),
-            version_id=str(workflow_version_id),
-            version_name=version_obj.get('name'),
-            description=workflow_basic_obj.get('description')
-        )  
+        ticket_field_service_ins.apply_external_data_source_fields_to_form(new_component_result_list, ticket_field_value_dict)
+        workflow_metadata = workflow_base_service_ins.build_workflow_metadata_for_ticket_form(
+            tenant_id, workflow_id, str(workflow_version_id)
+        )
         return new_component_result_list, workflow_metadata
                 
     @classmethod
@@ -756,13 +829,13 @@ class TicketBaseService(BaseService):
         """
         ticket_obj = TicketRecord.objects.filter(tenant_id=tenant_id, id=ticket_id).first()
         if not ticket_obj:
-            return CustomCommonException("ticket is not existed or has been deleted")
-        
+            raise CustomCommonException("ticket is not existed or has been deleted")
+
         user_obj = account_user_service_ins.get_user_by_user_id(tenant_id, user_id)
         if user_obj.type == 'admin':
             return True
         workflow_ticket_view_permission = workflow_permission_service_ins.user_workflow_permission_check(tenant_id, ticket_obj.workflow_id, ticket_obj.workflow_version_id, user_id, 'view')
-        if workflow_base_service_ins:
+        if workflow_ticket_view_permission:
             return True
         
         # check relation permission
@@ -1449,6 +1522,11 @@ class TicketBaseService(BaseService):
 
 
         field_permissions = current_node_record.props.get('field_permissions', {})
+        external_data_field_keys = {
+            c.get('component_key')
+            for c in workflow_component_service_ins.get_workflow_custom_fields(tenant_id, workflow_id, workflow_version_id)
+            if c.get('type') == 'externaldata'
+        }
         for field_key, field_permission in field_permissions.items():
             if field_permission == 'required':
                 required_field_list.append(field_key)
@@ -1457,6 +1535,8 @@ class TicketBaseService(BaseService):
                 update_field_list.append(field_key)
         if skip_fields_required_check:
             for required_field in required_field_list:
+                if required_field in external_data_field_keys:
+                    continue
                 if required_field not in fields.keys():
                     raise CustomCommonException('field {} is required'.format(required_field))
 

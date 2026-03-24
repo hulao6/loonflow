@@ -1,6 +1,10 @@
 import json
 import logging
+import os
 import traceback
+import uuid
+from django.conf import settings
+from django.http import FileResponse, Http404
 from schema import Schema, And, Or, Use, Optional
 from apps.loon_base_view import BaseView
 from service.format_response import api_response
@@ -9,6 +13,7 @@ from service.account.account_base_service import account_base_service_ins
 from service.exception.custom_common_exception import CustomCommonException
 from service.ticket.ticket_base_service import ticket_base_service_ins
 from service.ticket.ticket_node_service import ticket_node_service_ins
+from service.common.common_service import common_service_ins
 
 logger = logging.getLogger("django")
 
@@ -31,7 +36,6 @@ class TicketListView(BaseView):
         Optional('parent_ticket_node_id'): str,
         Optional('page', default=1): And(Use(int), lambda n: n > 0, error='page should be int and greater than 0'),
         Optional('per_page', default=10): And(Use(int), lambda n: n > 0, error='per_page should be int and greater than 0'),
-        Optional('act_state', default=10): And(Use(int), lambda n: n > 0, error='per_page should be int and greater than 0'),
     })
 
     post_schema = Schema({
@@ -74,13 +78,15 @@ class TicketListView(BaseView):
         # app_name
         app_name = request.META.get('HTTP_APPNAME')
 
-        # 未指定创建起止时间则取最近三年的记录
+        # Default list window: last three years (use aware local time for consistent filtering with USE_TZ)
         if not(create_start or create_end):
-            import datetime
-            end_time = datetime.datetime.now() + datetime.timedelta(hours=1)
-            last_year_time = datetime.datetime.now() - datetime.timedelta(days=365*3)
-            create_start = str(last_year_time)[:19]
-            create_end = str(end_time)[:19]
+            from datetime import timedelta
+            from django.utils import timezone
+            now_local = timezone.localtime(timezone.now())
+            end_time = now_local + timedelta(hours=1)
+            last_year_time = now_local - timedelta(days=365 * 3)
+            create_start = last_year_time.strftime('%Y-%m-%d %H:%M:%S')
+            create_end = end_time.strftime('%Y-%m-%d %H:%M:%S')
         try:
             result = ticket_base_service_ins.get_ticket_list(
                 tenant_id, search_value, user_id, creator_id, create_start, create_end,
@@ -145,7 +151,10 @@ class TicketDetailFormView(BaseView):
             return api_response(-1, "Internal Server Error", '')
         
         # check whether user has view permission
-        user_view_permission = ticket_base_service_ins.ticket_view_permission_check(tenant_id, ticket_id, operator_id)
+        try:
+            user_view_permission = ticket_base_service_ins.ticket_view_permission_check(tenant_id, ticket_id, operator_id)
+        except CustomCommonException as e:
+            return api_response(-1, str(e), '')
         if not user_view_permission:
             return api_response(-1, "user has no view permission", '')
 
@@ -276,6 +285,234 @@ class TicketFlowHistoryView(BaseView):
         return api_response(0, '', dict(ticket_flow_history_list = result['ticket_flow_history_object_format_list'], 
         total=result['paginator_info']['total'], page=result['paginator_info']['page'], per_page=result['paginator_info']['per_page']))
 
+
+class TicketDraftFileUploadView(BaseView):
+    """
+    Draft file upload for new ticket: save to {upload_dir}/{tenant_id}/draft/{upload_id}/, return draft URL; migrate to ticket directory when creating ticket
+    """
+    def post(self, request, *args, **kwargs):
+        tenant_id = request.META.get('HTTP_TENANTID')
+        if not tenant_id:
+            return api_response(-1, "tenant required", '')
+
+        loonflow_data_dir = getattr(settings, 'LOONFLOW_DATA_DIR', None)
+        if not loonflow_data_dir:
+            return api_response(-1, "LOONFLOW_DATA_DIR not configured", '')
+        upload_dir = os.path.join(loonflow_data_dir, tenant_id, 'ticket_uploads')
+
+        if 'file' not in request.FILES:
+            return api_response(-1, "no file in request", '')
+
+        uploaded = request.FILES['file']
+        ext = os.path.splitext(uploaded.name)[1] or ''
+        if ext and not ext.startswith('.'):
+            ext = '.' + ext
+        safe_name = str(uuid.uuid4()) + ext
+        dir_path = os.path.join(upload_dir, 'draft')
+        try:
+            os.makedirs(dir_path, exist_ok=True)
+        except OSError:
+            logger.error(traceback.format_exc())
+            return api_response(-1, "failed to create upload directory", '')
+
+        file_path = os.path.join(dir_path, safe_name)
+        try:
+            with open(file_path, 'wb') as f:
+                for chunk in uploaded.chunks():
+                    f.write(chunk)
+        except OSError:
+            logger.error(traceback.format_exc())
+            return api_response(-1, "failed to save file", '')
+
+        draft_url = f"/api/v1.0/tickets/{tenant_id}/draft/files/{safe_name}"
+        timestamp, token = common_service_ins.gen_file_temp_token(draft_url)
+        draft_url = f"{draft_url}?token={token}&timestamp={timestamp}"
+        return api_response(0, '', dict(url=draft_url, name=uploaded.name, size=uploaded.size))
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.method.lower() in self.http_method_names:
+            handler = getattr(self, request.method.lower(), self.http_method_not_allowed)
+        else:
+            handler = self.http_method_not_allowed
+        return handler(request, *args, **kwargs)
+
+
+class TicketDraftFileDownloadView(BaseView):
+    """
+    Draft file download for new ticket: download the file from {upload_dir}/{tenant_id}/ticket_uploads/draft/{safe_name}
+    only support temp token validataion
+    """
+    def get(self, request, *args, **kwargs):
+        token = request.GET.get('token', '')
+        timestamp = request.GET.get('timestamp', '')
+        if not (token and timestamp):
+            return api_response(-1, "token and timestamp are required", '')
+        
+        # check token valudation
+        tenant_id = kwargs.get('tenant_id', '')
+        safe_name = kwargs.get('safe_name', '')
+        file_uri = f"/api/v1.0/tickets/{tenant_id}/draft/files/{safe_name}?token={token}&timestamp={timestamp}"
+        flag, msg = common_service_ins.check_file_temp_token(token, timestamp, file_uri)
+        if not flag:
+            return api_response(-1, msg, '')
+        safe_name = kwargs.get('safe_name', '')
+        tenant_id = kwargs.get('tenant_id', '')
+
+        if not safe_name or '..' in safe_name or '/' in safe_name or '\\' in safe_name:
+            return api_response(-1, "invalid path", '')
+
+        loonflow_data_dir = getattr(settings, 'LOONFLOW_DATA_DIR', None)
+        if not loonflow_data_dir:
+            return api_response(-1, "LOONFLOW_DATA_DIR not configured", '')
+        upload_dir = os.path.join(loonflow_data_dir, tenant_id, 'ticket_uploads')
+        file_path = os.path.join(upload_dir, 'draft', safe_name)
+
+        if not os.path.isfile(file_path):
+            raise Http404("File not found")
+
+        try:
+            response = FileResponse(open(file_path, 'rb'), as_attachment=True, filename=safe_name)
+            return response
+        except OSError:
+            logger.error(traceback.format_exc())
+            return api_response(-1, "failed to read file", '')
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.method.lower() in self.http_method_names:
+            handler = getattr(self, request.method.lower(), self.http_method_not_allowed)
+        else:
+            handler = self.http_method_not_allowed
+        return handler(request, *args, **kwargs)
+
+
+class TicketFileUploadView(BaseView):
+    """ 
+    Ticket file upload: save the file to {LOONFLOW_DATA_DIR}/{tenant_id}/ticket_uploads/{ticket_id}/ and return the access path
+    """
+    def post(self, request, *args, **kwargs):
+        ticket_id = kwargs.get('ticket_id')
+        app_name = request.META.get('HTTP_APPNAME')
+        tenant_id = request.META.get('HTTP_TENANTID')
+        operator_id = request.META.get('HTTP_USERID')
+        try:
+            account_base_service_ins.app_ticket_permission_check(tenant_id, app_name, ticket_id)
+        except CustomCommonException as e:
+            return api_response(-1, str(e), '')
+        except Exception:
+            logger.error(traceback.format_exc())
+            return api_response(-1, "Internal Server Error", '')
+
+        try:
+            user_view_permission = ticket_base_service_ins.ticket_view_permission_check(tenant_id, ticket_id, operator_id)
+        except CustomCommonException as e:
+            return api_response(-1, str(e), '')
+        if not user_view_permission:
+            return api_response(-1, "user has no view permission", '')
+
+        loonflow_data_dir = getattr(settings, 'LOONFLOW_DATA_DIR', None)
+        if not loonflow_data_dir:
+            return api_response(-1, "LOONFLOW_DATA_DIR not configured", '')
+        upload_dir = os.path.join(loonflow_data_dir, tenant_id, 'ticket_uploads')
+        dir_path = os.path.join(upload_dir, str(ticket_id))
+
+        if 'file' not in request.FILES:
+            return api_response(-1, "no file in request", '')
+
+        uploaded = request.FILES['file']
+        ext = os.path.splitext(uploaded.name)[1] or ''
+        if ext and not ext.startswith('.'):
+            ext = '.' + ext
+        safe_name = str(uuid.uuid4()) + ext
+        try:
+            os.makedirs(dir_path, exist_ok=True)
+        except OSError:
+            logger.error(traceback.format_exc())
+            return api_response(-1, "failed to create upload directory", '')
+
+        file_path = os.path.join(dir_path, safe_name)
+        try:
+            with open(file_path, 'wb') as f:
+                for chunk in uploaded.chunks():
+                    f.write(chunk)
+        except OSError:
+            logger.error(traceback.format_exc())
+            return api_response(-1, "failed to save file", '')
+
+        file_url = f"/api/v1.0/tickets/{tenant_id}/{ticket_id}/files/{safe_name}"
+        timestamp, token = common_service_ins.gen_file_temp_token(file_url)
+        file_url = f"{file_url}?token={token}&timestamp={timestamp}"
+        return api_response(0, '', dict(url=file_url, name=uploaded.name, size=uploaded.size))
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.method.lower() in self.http_method_names:
+            handler = getattr(self, request.method.lower(), self.http_method_not_allowed)
+        else:
+            handler = self.http_method_not_allowed
+        return handler(request, *args, **kwargs)
+
+
+class TicketFileDownloadView(BaseView):
+    """
+    Ticket file download: check the ticket view permission and return the file content, the path is the same as TicketFileUploadView, the URL is the safe_name
+    """
+    def get(self, request, *args, **kwargs):
+        ticket_id = kwargs.get('ticket_id')
+        safe_name = kwargs.get('safe_name', '')
+        tenant_id = kwargs.get('tenant_id', '')
+        operator_id = request.META.get('HTTP_USERID')
+        token = request.GET.get('token', '')
+        timestamp = request.GET.get('timestamp', '')
+
+        if not safe_name or '..' in safe_name or '/' in safe_name or '\\' in safe_name:
+            return api_response(-1, "invalid safe_name", '')
+
+        
+        if token:
+            # token permission check
+            file_uri = f"/api/v1.0/tickets/{tenant_id}/{ticket_id}/files/{safe_name}"
+            flag, msg = common_service_ins.check_file_temp_token(token, timestamp, file_uri)
+            if not flag:
+                return api_response(-1, msg, '')
+        else:
+            try:
+                account_base_service_ins.app_ticket_permission_check(tenant_id, 'loonflow', ticket_id)
+            except CustomCommonException as e:
+                return api_response(-1, str(e), '')
+            except Exception:
+                logger.error(traceback.format_exc())
+                return api_response(-1, "Internal Server Error", '')
+
+            try:
+                user_view_permission = ticket_base_service_ins.ticket_view_permission_check(tenant_id, ticket_id, operator_id)
+            except CustomCommonException as e:
+                return api_response(-1, str(e), '')
+            if not user_view_permission:
+                return api_response(-1, "user has no view permission", '')
+
+        loonflow_data_dir = getattr(settings, 'LOONFLOW_DATA_DIR', None)
+        if not loonflow_data_dir:
+            return api_response(-1, "LOONFLOW_DATA_DIR not configured", '')
+
+        upload_dir = os.path.join(loonflow_data_dir, tenant_id, 'ticket_uploads')
+        file_path = os.path.join(upload_dir, str(ticket_id), safe_name)
+        if not os.path.isfile(file_path):
+            raise Http404("File not found")
+
+        try:
+            response = FileResponse(open(file_path, 'rb'), as_attachment=True, filename=safe_name)
+            return response
+        except OSError:
+            logger.error(traceback.format_exc())
+            return api_response(-1, "failed to read file", '')
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.method.lower() in self.http_method_names:
+            handler = getattr(self, request.method.lower(), self.http_method_not_allowed)
+        else:
+            handler = self.http_method_not_allowed
+        return handler(request, *args, **kwargs)
+
+
 class TicketMockExternalAssigneeView(BaseView):
     def post(self, request, *args, **kwargs):
         """
@@ -285,7 +522,83 @@ class TicketMockExternalAssigneeView(BaseView):
         :param kwargs:
         :return:
         """
+        signature = request.META.get('HTTP_SIGNATURE')
+        timestamp = request.META.get('HTTP_TIMESTAMP')
+        # token = "" # should be the same as you configured in loonflow
+        # if token and signature and timestamp:
+        #     try:
+        #         common_service_ins.signature_check(timestamp, signature, token)
+        #     except CustomCommonException as e:
+        #         return api_response(-1, str(e), {})
+
+        # you can return the assignee email list base on ticket detail info from body
+        # try:
+        #     body = json.loads(request.body.decode('utf-8')) if request.body else {}
+        # except (json.JSONDecodeError, UnicodeDecodeError):
+        #     body = {}
+        # if not isinstance(body, dict):
+        #     body = {}
         return api_response(0, '', {'assignee_email_list': ["blackholll@loonapp.com"]})
+
+
+class TicketMockExternalDataSourceView(BaseView):
+    """
+    Mock endpoint for external data source field testing.
+    Expects the same headers as hook calls: signature + timestamp (md5(timestamp + token)).
+    Request body is the ticket fields JSON object.
+    Response shape matches fetch_external_data_source_value: code 0 and data.value.
+
+    Query params:
+    - style or displayStyle: json | key_value | text (same as form field displayStyle).
+      Demo payload is shaped for that rendering mode.
+    - token: optional, for signature_check when signature/timestamp are sent.
+    """
+
+    @staticmethod
+    def _demo_value_for_style(style: str, _body: dict) -> object:
+        """Minimal sample values for each displayStyle (_body is the ticket fields POST body, unused)."""
+        if style == 'json':
+            return [
+                {'id': 1, 'name': 'demo_item_a', 'ok': True},
+                {'id': 2, 'name': 'demo_item_b', 'ok': False},
+            ]
+
+        if style == 'key_value':
+            return {'a': 1, 'b': 2, 'c': 3}
+
+        return 'this is a sample text from external'
+
+    def post(self, request, *args, **kwargs):
+        signature = request.META.get('HTTP_SIGNATURE')
+        timestamp = request.META.get('HTTP_TIMESTAMP')
+        # token = "" # should be the same as you configured in loonflow
+        # if token and signature and timestamp:
+        #     try:
+        #         common_service_ins.signature_check(timestamp, signature, token)
+        #     except CustomCommonException as e:
+        #         return api_response(-1, str(e), {})
+
+        # you can return the result base on ticket detail info from body
+        try:
+            body = json.loads(request.body.decode('utf-8')) if request.body else {}
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            body = {}
+        if not isinstance(body, dict):
+            body = {}
+
+        raw_style = (
+            request.GET.get('style')
+            or request.GET.get('displayStyle')
+            or 'text'
+        )
+        style = str(raw_style).strip().lower()
+        if style in ('keyvalue', 'key-value'):
+            style = 'key_value'
+        if style not in ('json', 'key_value', 'text'):
+            style = 'text'
+
+        demo_value = self._demo_value_for_style(style, body)
+        return api_response(0, '', {'value': demo_value})
 class TicketCurrentNodeInfosView(BaseView):
     def get(self, request, *args, **kwargs):
         """

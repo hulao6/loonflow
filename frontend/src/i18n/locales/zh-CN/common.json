@@ -122,5 +122,12 @@
     "invalidDateTime": "无效的日期时间格式"
   },
   "update": "更新",
-  "selected": "已选择"
+  "selected": "已选择",
+  "updateSuccess": "更新成功",
+  "operationFailed": "操作失败",
+  "submitting": "提交中...",
+  "deleteSuccess": "删除成功",
+  "deleteFailed": "删除失败",
+  "loadFailed": "加载失败",
+  "rowsPerPage": "每页行数"
 }

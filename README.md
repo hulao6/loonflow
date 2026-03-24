@@ -9,7 +9,7 @@ Dedicated to providing enterprise-grade unified workflow solutions
 
 [English](./README.md) | [简体中文](./README_zh.md)
 
-# 🚀 Loonflow 3.0 - A Fresh Start
+# Loonflow 3.0 - A Fresh Start
 
 Loonflow is an open-source process automation platform developed based on Django. After multiple versions of iteration and refactoring, we proudly present Loonflow 3.0 - a version that achieves a qualitative leap in visualization, flexibility, and scalability.
 
@@ -19,27 +19,28 @@ The core of version 3.0 is "making complex business processes simple and visual,
 [![Feature Demo new](https://img.youtube.com/vi/IpLePpajyfU/0.jpg)](https://www.youtube.com/watch?v=IpLePpajyfU)
 
 
-# ✨ Core Features
+# Core Features
 
-## 🎯 Revolutionary Visual Design
+## Revolutionary Visual Design
 - **Drag-and-Drop Process Designer**: No complex configuration needed. Complete complex business process modeling through intuitive drag-and-drop connections. Supports advanced nodes like conditional branches, parallel tasks, and hooks.
 - **Smart Form Designer**: Powerful visual form building tool with rich field types (text, numbers, dropdowns, personnel selection, attachments, etc.) and flexible layouts.
 - **Real-time Preview & Validation**: Real-time preview during process design with built-in process logic validation to prevent design errors early.
 - **Multi-Version Process Configuration**: You can configure multiple versions of processes and easily test and switch between versions.
 
 
-## 🔧 Ultimate Flexibility & Extensibility
+## Ultimate Flexibility & Extensibility
 - **Plugin Architecture**: We provide plugin extension capabilities for almost all key nodes (such as custom actions, permission validation, notification methods, etc.). Your unique business logic can be easily integrated like building blocks.
 - **Powerful API System**: Provides comprehensive and clear RESTful APIs for seamless integration with your customer service systems, CMDB, monitoring systems, CI/CD, OA, and other third-party systems.
 - **Highly Customizable Permission Model**: Supports fine-grained permission control based on roles, departments, or even specific business conditions to meet complex enterprise permission management needs.
 
-## 💼 Enterprise-Ready Features Out of the Box
+## Enterprise-Ready Features Out of the Box
 - **Multi-Type Ticket Support**: Easily manage various processes including IT operations, HR approvals, financial reimbursements, customer service, etc.
 - **Automation & Smart Routing**: Supports conditional routing based on form data, automatic assignee assignment, and intelligent ticket flow.
 - **Comprehensive Audit Logs**: Complete records of every operation from ticket creation to closure, meeting compliance and audit requirements.
+- **Authentication**: Supports Microsoft OIDC, Wecom QR scan login.
 - **Multi-Tenant Support (Optional)**: Provides data isolation capabilities for SaaS providers or large enterprise groups (requires additional authorization).
 
-# 🛠️ Installation & Deployment
+# Installation & Deployment
 1. Download docker-compose related files
 ```
 wget https://raw.githubusercontent.com/blackholll/loonflow/refs/heads/master/docker_compose_deploy/docker-compose.yml
@@ -52,22 +53,17 @@ Navigate to the directory containing docker-compose.yml and execute:
 ```
 docker-compose up -d
 ```
-4. Create admin user
-```
-cd /app/loonflow
-python manage.py createsuperuser
-```
-5. Access loonflow
-Login to loonflow using the email and password you created in step 3
+4. Access loonflow
+Login to loonflow using the email and password you set in the .env file.
 
-# 🗺️ Project Roadmap
+# Project Roadmap
 [Roadmap](./Roadmap.md)
 
-# 📖 Deep Dive
+# Deep Dive
 
-- 📚 **Complete Documentation** - Learn all the details about installation, configuration, usage, and development: https://loonflow.readthedocs.io
-- 🔌 **Hook Development Guide** - Learn how to develop custom plugins for Loonflow.
-- 🌐 **API Reference** - View complete API interface documentation. https://documenter.getpostman.com/view/15031929/2sB3WyJbap
+- **Complete Documentation** - Learn all the details about installation, configuration, usage, and development: https://loonflow.readthedocs.io
+- **Hook Development Guide** - Learn how to develop custom plugins for Loonflow.
+- **API Reference** - View complete API interface documentation. https://documenter.getpostman.com/view/15031929/2sB3WyJbap
 
 # 🤝 Contributing
 
@@ -75,13 +71,13 @@ Community contributions are warmly welcome! Whether you're fixing typos, improvi
 
 Please fork this repository first, then submit a Pull Request.
 
-# ❓ Getting Help
+# Getting Help
 
-- 📝 **GitHub Issues** - Submit bug reports and feature requests.
-- 💬 **Discussion Forum** [Discord](https://discord.gg/WuppaG638k).
-- 📧 **Commercial Support & Customization**: For enterprise-level deep customization, technical training, or deployment support needs, please contact me at [blackholll@163.com;blackholll.cn@gmail.com].
+- **GitHub Issues** - Submit bug reports and feature requests.
+- **Discussion Forum** [Discord](https://discord.gg/WuppaG638k).
+- **Commercial Support & Customization**: For enterprise-level deep customization, technical training, or deployment support needs, please contact me at [blackholll@163.com;blackholll.cn@gmail.com].
 
-# 🙏 Acknowledgments
+# Acknowledgments
 
 Thanks to all contributors who have contributed code, submitted issues, and helped improve documentation for Loonflow.
 

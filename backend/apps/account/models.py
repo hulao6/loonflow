@@ -95,7 +95,7 @@ class User(AbstractBaseUser, BaseCommonModel):
     alias = models.CharField("alias", max_length=50, null=False, default='')
     dept = models.ManyToManyField("Dept", through=UserDept)
     role = models.ManyToManyField("Role", through=UserRole)
-
+    external_user_id = models.CharField("external_user_id", max_length=100, null=True, default='', help_text="the external user id, such as wecom_userid, dingtalk_userid, feishu_userid")
     email = models.EmailField("email", max_length=255, null=False, unique=True)
     phone = models.CharField("phone", max_length=50, null=False, default='')
     is_active = models.BooleanField("is_active", null=False, default=True)

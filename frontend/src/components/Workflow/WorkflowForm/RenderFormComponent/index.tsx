@@ -6,9 +6,11 @@ import {
     DateField,
     DateTimeField,
     DepartmentField,
+    ExternalDataField,
     FileField,
     NumberField,
     RadioField,
+    RichTextField,
     SelectField,
     TextAreaField,
     TextField,
@@ -25,9 +27,11 @@ import {
 interface RenderFormComponentProps {
     component: IWorkflowComponent;
     handleComponentUpdate: (updatedComponent: IWorkflowComponent) => void;
+    /** 工单 ID，用于附件组件上传与带权限的下载 */
+    ticketId?: string;
 }
 
-function RenderFormComponent({ component, handleComponentUpdate }: RenderFormComponentProps): React.ReactElement {
+function RenderFormComponent({ component, handleComponentUpdate, ticketId }: RenderFormComponentProps): React.ReactElement {
     const { t } = useTranslation();
 
     // 根据组件类型和multiple属性确定初始值
@@ -77,7 +81,7 @@ function RenderFormComponent({ component, handleComponentUpdate }: RenderFormCom
         return <div>{t('common.invalidComponent')}</div>;
     }
 
-    // 根据组件类型渲染不同的表单字段
+
     switch (component.type) {
         case 'text':
             return (
@@ -168,6 +172,17 @@ function RenderFormComponent({ component, handleComponentUpdate }: RenderFormCom
                     onChange={handleFieldChange}
                     mode={component.componentPermission === 'readonly' ? 'view' : 'edit'}
                     props={component.props}
+                    ticketId={ticketId}
+                />
+            );
+        case 'richtext':
+            return (
+                <RichTextField
+                    value={value}
+                    onChange={handleFieldChange}
+                    mode={component.componentPermission === 'readonly' ? 'view' : 'edit'}
+                    props={component.props}
+                    ticketId={ticketId}
                 />
             );
         case 'user':
@@ -185,6 +200,13 @@ function RenderFormComponent({ component, handleComponentUpdate }: RenderFormCom
                     value={value}
                     onChange={handleFieldChange}
                     mode={component.componentPermission === 'readonly' ? 'view' : 'edit'}
+                    props={component.props}
+                />
+            );
+        case 'externaldata':
+            return (
+                <ExternalDataField
+                    value={value}
                     props={component.props}
                 />
             );

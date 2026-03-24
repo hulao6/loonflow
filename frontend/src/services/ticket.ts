@@ -61,7 +61,21 @@ export const getTicketFlowHistory = async (ticketId: string): Promise<ITicketFlo
 export const getTicketCurrentNodeInfos = async (ticketId: string): Promise<ITicketCurrentNodeInfosRes | IApiErrResponse> => {
   const response = await apiClient.get(`/api/v1.0/tickets/${ticketId}/current_node_infos`, { params: {} });
   return response.data;
-}
+};
+
+export const uploadTicketFile = async (ticketId: string, file: File) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await apiClient.post(`/api/v1.0/tickets/${ticketId}/files`, formData);
+  return response.data;
+};
+
+export const uploadDraftFile = async (file: File) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await apiClient.post('/api/v1.0/tickets/draft/files', formData);
+  return response.data;
+};
 
 // export const getWorkflowList = async (params: IWorkflowParam) => {
 //   try {

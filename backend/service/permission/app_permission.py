@@ -1,5 +1,8 @@
+from ast import pattern
 import json
+from django.db.models.constraints import F
 import jwt
+import re
 import traceback
 from celery.worker.consumer.mingle import exception
 from django.conf import settings
@@ -19,13 +22,21 @@ class AppPermissionCheck(MiddlewareMixin):
     """
     app call permission check middleware
     """
-    def process_request(self, request):
+    def process_request(self, request, *args, **kwargs):
         if request.path == '/api/v1.0/login':
             # for jwt login
             return
         if request.path.startswith('/api/v1.0/accounts/tenants/by_domain'):
             return
         if request.path.startswith('/api/v1.0/tickets/mock_external_assignee'):
+            return
+        if request.path.startswith('/api/v1.0/tickets/mock_external_data_source'):
+            return
+        # OAuth related endpoints don't require authentication
+        if request.path.startswith('/api/v1.0/manage/auth/'):
+            # Set default tenant_id for OAuth endpoints
+            if not request.META.get('HTTP_TENANTID'):
+                request.META.update(dict(HTTP_TENANTID='00000000-0000-0000-0000-000000000001'))
             return
         if request.path.startswith('/api/'):
             auth_header = request.META.get('HTTP_AUTHORIZATION')
@@ -55,6 +66,15 @@ class AppPermissionCheck(MiddlewareMixin):
         :param request:
         :return:
         """
+        if request.method.lower() == 'get':
+            pattern = r'/api/v1\.0/tickets/([^/]+)/([^/]+)/files/([^/]+\.\w+)$'
+            if re.match(pattern, request.path):
+                if request.GET.get('token'):
+                    request.META.update(dict(HTTP_TENANTID=""))
+                    request.META.update(dict(HTTP_APPNAME=""))
+                    request.META.update(dict(HTTP_EMAIL=""))
+                    request.META.update(dict(HTTP_USERID=""))
+                    return
         signature = request.META.get('HTTP_SIGNATURE')
         timestamp = request.META.get('HTTP_TIMESTAMP')
         app_name = request.META.get('HTTP_APPNAME')

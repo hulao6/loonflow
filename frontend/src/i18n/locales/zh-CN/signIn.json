@@ -8,5 +8,22 @@
   "forgotPassword": "忘记密码？",
   "noAccount": "还没有账号？注册",
   "welcomeBack": "欢迎回来！请登录继续。",
-  "welcomeMessage": "欢迎!"
+  "welcomeMessage": "欢迎!",
+  "wecomLogin": "企业微信登录",
+  "feishuLogin": "飞书登录",
+  "wecomScanLogin": "企业微信扫码登录",
+  "missingAuthCode": "缺少authcode",
+  "loginSuccess": "登录成功",
+  "loginFailed": "登录失败",
+  "loggingIn": "登录中",
+  "getProfileFailed": "获取用户信息失败",
+  "wecomSDKNotLoaded": "企业微信 SDK 未加载或容器不存在",
+  "wecomLoginPanelInitialized": "企业微信登录面板已初始化",
+  "receivedWecomAuthCode": "收到企业微信auth code",
+  "wecomLoginFailed": "企业微信登录失败",
+  "handleWecomMessageFailed": "处理企业微信消息失败",
+  "initializeWecomLoginPanelFailed": "初始化企业微信登录面板失败",
+  "loadingScanLogin": "正在扫码登录",
+  "pleaseUseWecomScanLogin": "请使用企业微信扫码登录",
+  "microsoftLogin": "微软账号登录"
 }

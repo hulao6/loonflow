@@ -94,7 +94,15 @@ function ViewField({
                         }
                     }
                 } else {
-                    computedValue = value as string;
+                    if (value !== null && typeof value === 'object') {
+                        try {
+                            computedValue = JSON.stringify(value, null, 2);
+                        } catch {
+                            computedValue = String(value);
+                        }
+                    } else {
+                        computedValue = String(value ?? '');
+                    }
                 }
                 setDisplayValue(computedValue);
             }

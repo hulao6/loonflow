@@ -122,7 +122,7 @@ function FormDesign(props: FormDesignProps) {
 
             const newComponent: IWorkflowComponent = {
                 id: generateId(),
-                type: template.type as 'text' | 'textarea' | 'number' | 'select' | 'radio' | 'checkbox' | 'time' | 'date' | 'user' | 'department' | 'file' | 'title' | 'creator_info' | 'created_at' | 'ticket_node_infos' | 'act_state' | 'workflow_info' | 'current_assignee_infos' | 'ticket_node_infos',
+                type: template.type as IWorkflowComponent['type'],
                 componentName: template.componentName || t('workflow.newField'),
                 label: {},
                 description: template.defaultProps.description || '',
@@ -131,8 +131,9 @@ function FormDesign(props: FormDesignProps) {
                     placeholder: template.defaultProps.placeholder || '',
                     multiple: template.defaultProps.props?.multiple || false,
                     optionsWithKeys: optionsWithKeys,
+                    ...template.defaultProps.props,
                 },
-                layout: { span: 6 }
+                layout: { span: template.defaultProps.layout?.span ?? 6 }
             };
 
             // 查找最后一个行容器，如果不存在或已满，创建新行

@@ -20,8 +20,8 @@ export function safeParseDate(dateString: string): Date | null {
             if (timezoneMatch) {
                 const timezone = timezoneMatch[1];
                 const datePart = dateString.replace(/\s*[+-]\d{4}$/, '');
-                // 转换为ISO格式
-                const isoString = `${datePart}.000${timezone}`;
+                // Convert to ISO 8601 for Safari compatibility (e.g. 2025-05-25T10:30:00+08:00)
+                const isoString = `${datePart.replace(' ', 'T')}${timezone.slice(0, 3)}:${timezone.slice(3)}`;
                 return new Date(isoString);
             }
         }
@@ -56,7 +56,6 @@ export function formatDate(
     if (!date) return 'Invalid Date';
 
     try {
-        console.log('date', date);
         return date.toLocaleString('zh-CN', options);
     } catch (error) {
         console.warn('日期格式化失败:', dateString, error);

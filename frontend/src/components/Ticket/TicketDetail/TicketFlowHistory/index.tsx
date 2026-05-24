@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { getTicketFlowHistory } from '../../../../services/ticket';
 import { ITicketFlowHistoryItem } from '../../../../types/ticket';
+import { formatDate } from '../../../../utils/dateFormat';
 
 interface TicketHistoryProps {
     ticketId: string;
@@ -47,7 +48,7 @@ function TicketFlowHistory({ ticketId, refreshToken }: TicketHistoryProps) {
                                 {it.comment && (
                                     <Typography variant="body2" sx={{ mt: 0.5 }}><strong>{t('ticket.comment')}</strong>: {it.comment}</Typography>
                                 )}
-                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}><strong>{t('ticket.operationTime')}</strong>: {new Date(it.createdAt).toLocaleString()}</Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}><strong>{t('ticket.operationTime')}</strong>: {formatDate(it.createdAt)}</Typography>
                             </Box>
                         </ListItem>
                         {idx < items.length - 1 && <Divider component="li" />}

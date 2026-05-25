@@ -3,6 +3,12 @@ r3.0.1+
 
 
 ---------
+r3.2.2
+---------
+- Bugfix: In Safari, the operation time in the ticket operation history is displayed as "invalid date"
+- Bugfix: ticket creator as participant  not able to handle ticket
+
+---------
 r3.2.1
 ---------
 - Feature: Add MCP tool to retrieve user list

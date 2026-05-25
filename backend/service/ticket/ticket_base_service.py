@@ -642,7 +642,7 @@ class TicketBaseService(BaseService):
                             all_assignee_result={})
             
             parent_ticket_id = ticket_obj.parent_ticket_id
-            creator_id = ticket_obj.creator_id
+            creator_id = str(ticket_obj.creator_id)
             ticket_node_queryset = TicketNode.objects.filter(ticket_id=ticket_id, tenant_id=tenant_id, node_id=node_id)
             if ticket_node_queryset:
                 all_assignee_result = ticket_node_queryset[0].all_assignee_result
